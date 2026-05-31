@@ -1,0 +1,72 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+!secrets/*.example
+security/secrets/*
+!security/secrets/.gitkeep
+!security/secrets/README.md
+!security/secrets/*.example
+private/
+customer-private/
+
+# Runtime data
+data/
+infrastructure/data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+tmp/
+temp/
+
+# Web and Node.js
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Docker and local compose overrides
+docker-compose.override.yml
+compose.override.yml
+
+# Legacy monorepo workspace residue
+02-products/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated exports
+exports/
+generated/

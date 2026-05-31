@@ -1,0 +1,84 @@
+name: ${COMPOSE_PROJECT_NAME:-sboon-llb-main-core}
+
+services:
+  llbridge-singleuser-image:
+    image: ${JUPYTER_SINGLEUSER_IMAGE:-jupyter/datascience-notebook:latest}
+    pull_policy: missing
+    command:
+      - python
+      - -c
+      - print("JupyterLab single-user image is available")
+    restart: "no"
+
+  llbridge-web:
+    build:
+      context: ./platform/apps/web
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${NEXTJS_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/nextjs:/app/data
+    # If using Postgres, you might want to add:
+    # depends_on:
+    #   - llbridge-db-pg
+    restart: always
+
+  # --- Future Database Support (PostgreSQL) ---
+  # To use Postgres: 
+  # 1. Change DATABASE_URL in .env to point to this service
+  # 2. Update schema.prisma provider to "postgresql"
+  # 3. Uncomment this service
+  llbridge-db-pg:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-llbridge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-llbridge_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-llbridge}
+    volumes:
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/postgres:/var/lib/postgresql/data
+    profiles:
+      - postgres # Only starts if specifically requested
+    restart: always
+
+  llbridge-hub:
+    build:
+      context: ./infrastructure/lab/jupyterhub
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      llbridge-singleuser-image:
+        condition: service_completed_successfully
+    ports:
+      - "${JUPYTERHUB_PORT:-8000}:8000"
+    environment:
+      JUPYTERHUB_HOST_WORKSPACES: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/lab-workspaces
+      JUPYTERHUB_HOST_SHARED_CONTENT: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/content/sample-notebooks
+      JUPYTERHUB_HOST_SINGLEUSER_CONFIG: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/lab/jupyterlab/singleuser-config
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/jupyterhub:/srv/jupyterhub
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/lab-workspaces:/srv/jupyterhub/workspaces
+    restart: always
+
+  llbridge-proxy:
+    image: nginx:alpine
+    volumes:
+      - ./infrastructure/proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - llbridge-web
+      - llbridge-hub
+    restart: always
+
+  llbridge-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://llbridge-proxy:80
+    restart: always
+
+networks:
+  default:
+    name: ${DOCKER_NETWORK_NAME:-sboon-llb-main-core_default}

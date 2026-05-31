@@ -1,0 +1,14 @@
+{
+  "@jupyterlab/application-extension:top-bar": {
+    "toolbar": [
+      {
+        "name": "llbridge-home",
+        "command": "hub:control-panel",
+        "type": "command",
+        "rank": 10,
+        "label": "Back to Platform",
+        "caption": "Open LearnLab Bridge"
+      }
+    ]
+  }
+}

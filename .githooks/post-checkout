@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+branch_checkout="${3:-0}"
+if [ "$branch_checkout" != "1" ]; then
+  exit 0
+fi
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+
+case "$(uname -s 2>/dev/null || echo unknown)" in
+  MINGW*|MSYS*|CYGWIN*|Windows_NT)
+    if command -v pwsh >/dev/null 2>&1; then
+      exec pwsh -NoProfile -ExecutionPolicy Bypass -File "$repo_root/scripts/sync-env.ps1"
+    fi
+    if command -v powershell >/dev/null 2>&1; then
+      exec powershell -NoProfile -ExecutionPolicy Bypass -File "$repo_root/scripts/sync-env.ps1"
+    fi
+    ;;
+esac
+
+exec sh "$repo_root/scripts/sync-env.sh"
