@@ -78,6 +78,39 @@ def repair_existing_workspace(user_dir):
     apply_user_ownership(marker)
 
 
+async def report_usage(type, username, action=None, details=None, metrics=None):
+    secret = os.environ.get("JUPYTERHUB_SHARED_SECRET")
+    # Use internal service name for communication within Docker
+    web_url = "http://llbridge-web:3000"
+    api_url = f"{web_url}/api/jupyter/report"
+    
+    payload = {
+        "type": type,
+        "username": username,
+        "action": action,
+        "details": details,
+        "metrics": metrics
+    }
+    
+    from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+    import json
+    
+    client = AsyncHTTPClient()
+    try:
+        req = HTTPRequest(
+            api_url,
+            method="POST",
+            body=json.dumps(payload),
+            headers={
+                "Authorization": f"Bearer {secret}",
+                "Content-Type": "application/json"
+            },
+            validate_cert=False
+        )
+        await client.fetch(req)
+    except Exception as e:
+        print(f"Failed to report usage for {username}: {e}")
+
 async def prepare_user_workspace(spawner):
     auth_state = await spawner.user.get_auth_state()
     role = (auth_state or {}).get("role", "STUDENT")
@@ -108,6 +141,25 @@ async def prepare_user_workspace(spawner):
         )
     apply_user_ownership(readme)
     repair_existing_workspace(user_dir)
+    
+    # Report Lab Spawn
+    await report_usage("ACTIVITY", username, action="LAB_SPAWN", details={"role": role})
+
+async def clean_up_after_stop(spawner):
+    username = spawner.user.name
+    
+    # Try to collect metrics before full removal if possible
+    # For DockerSpawner, we might get last known stats
+    metrics = {"cpu": 0, "memory": 0}
+    try:
+        # Simple placeholder for metric collection
+        # In a real scenario, we'd query docker stats before stopping
+        pass
+    except:
+        pass
+        
+    await report_usage("ACTIVITY", username, action="LAB_STOP")
+    await report_usage("METRICS", username, metrics=metrics)
 
 
 c.JupyterHub.authenticator_class = LLBridgeAuthenticator
@@ -165,6 +217,7 @@ c.DockerSpawner.volumes = {
 }
 
 c.Spawner.pre_spawn_hook = prepare_user_workspace
+c.Spawner.post_stop_hook = clean_up_after_stop
 c.Spawner.default_url = "/lab"
 c.Spawner.start_timeout = env_int("JUPYTERHUB_START_TIMEOUT", 900)
 c.Spawner.http_timeout = env_int("JUPYTERHUB_HTTP_TIMEOUT", 120)
