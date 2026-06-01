@@ -1,0 +1,39 @@
+# รายการไฟล์และโฟลเดอร์ที่ห้ามส่งออกสู่สาธารณะ (Public Export Exclusion List)
+
+# Environment and Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+security/secrets/*
+!security/secrets/*.example
+!.env.example
+*.pem
+*.key
+
+# Databases and Local Data
+*.db
+*.sqlite
+*.sqlite-journal
+infrastructure/data/jupyterhub/*
+infrastructure/data/lab-workspaces/*
+!infrastructure/data/.gitkeep
+
+# Build and Dependencies
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# Internal Governance and Management
+GIT_GOVERNANCE.md
+analysis-process-project/
+learnlab-bridge-export/
+scripts/sync-to-public.ps1
+scripts/sync-to-public.cmd
+
+# System Files
+Thumbs.db
+.DS_Store
+Desktop.ini

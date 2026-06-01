@@ -29,18 +29,39 @@ if (-not (Test-Path $targetFile)) {
 }
 
 # Read content and perform dynamic replacement
-$content = Get-Content -Raw -Path $targetFile -Encoding UTF8
+$envLines = Get-Content -Path $targetFile -Encoding UTF8
+$updatedLines = @()
+$keysToEnsure = @{
+    "LLBRIDGE_PROJECT_ROOT" = $repoRootPath
+    "JUPYTERHUB_HOST_WORKSPACES" = "$repoRootPath/infrastructure/data/lab-workspaces"
+    "JUPYTERHUB_HOST_SHARED_CONTENT" = "$repoRootPath/infrastructure/content/sample-notebooks"
+    "JUPYTERHUB_HOST_SINGLEUSER_CONFIG" = "$repoRootPath/infrastructure/lab/jupyterlab/singleuser-config"
+}
+$seenKeys = @()
 
-# 1. Replace all <clone-root> placeholders
-$updatedContent = $content -replace '<clone-root>', $repoRootPath
+foreach ($line in $envLines) {
+    $processedLine = $line -replace '<clone-root>', $repoRootPath
+    if ($processedLine -match "^([^=]+)=(.*)$") {
+        $key = $Matches[1]
+        if ($keysToEnsure.ContainsKey($key)) {
+            $updatedLines += "$key=$($keysToEnsure[$key])"
+            $seenKeys += $key
+        } else {
+            $updatedLines += $processedLine
+        }
+    } else {
+        $updatedLines += $processedLine
+    }
+}
 
-# 2. Force update LLBRIDGE_PROJECT_ROOT and other host paths to current location
-$updatedContent = $updatedContent -replace "LLBRIDGE_PROJECT_ROOT=.*", "LLBRIDGE_PROJECT_ROOT=$repoRootPath"
-$updatedContent = $updatedContent -replace "JUPYTERHUB_HOST_WORKSPACES=.*", "JUPYTERHUB_HOST_WORKSPACES=$repoRootPath/infrastructure/data/lab-workspaces"
-$updatedContent = $updatedContent -replace "JUPYTERHUB_HOST_SHARED_CONTENT=.*", "JUPYTERHUB_HOST_SHARED_CONTENT=$repoRootPath/infrastructure/content/sample-notebooks"
-$updatedContent = $updatedContent -replace "JUPYTERHUB_HOST_SINGLEUSER_CONFIG=.*", "JUPYTERHUB_HOST_SINGLEUSER_CONFIG=$repoRootPath/infrastructure/lab/jupyterlab/singleuser-config"
+# Append missing essential keys
+foreach ($key in $keysToEnsure.Keys) {
+    if ($key -notin $seenKeys) {
+        $updatedLines += "$key=$($keysToEnsure[$key])"
+    }
+}
 
-Set-Content -LiteralPath $targetFile -Value $updatedContent -Encoding UTF8
+Set-Content -LiteralPath $targetFile -Value $updatedLines -Encoding UTF8
 Write-Host "Successfully synced environment paths to: $repoRootPath"
 # -----------------------------
 

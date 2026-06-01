@@ -29,17 +29,26 @@ else
     sed -i "s|<clone-root>|$REPO_ROOT|g" "$TARGET_FILE"
 fi
 
-# 2. Force update all path keys
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s|^LLBRIDGE_PROJECT_ROOT=.*|LLBRIDGE_PROJECT_ROOT=$REPO_ROOT|" "$TARGET_FILE"
-    sed -i '' "s|^JUPYTERHUB_HOST_WORKSPACES=.*|JUPYTERHUB_HOST_WORKSPACES=$REPO_ROOT/infrastructure/data/lab-workspaces|" "$TARGET_FILE"
-    sed -i '' "s|^JUPYTERHUB_HOST_SHARED_CONTENT=.*|JUPYTERHUB_HOST_SHARED_CONTENT=$REPO_ROOT/infrastructure/content/sample-notebooks|" "$TARGET_FILE"
-    sed -i '' "s|^JUPYTERHUB_HOST_SINGLEUSER_CONFIG=.*|JUPYTERHUB_HOST_SINGLEUSER_CONFIG=$REPO_ROOT/infrastructure/lab/jupyterlab/singleuser-config|" "$TARGET_FILE"
-else
-    sed -i "s|^LLBRIDGE_PROJECT_ROOT=.*|LLBRIDGE_PROJECT_ROOT=$REPO_ROOT|" "$TARGET_FILE"
-    sed -i "s|^JUPYTERHUB_HOST_WORKSPACES=.*|JUPYTERHUB_HOST_WORKSPACES=$REPO_ROOT/infrastructure/data/lab-workspaces|" "$TARGET_FILE"
-    sed -i "s|^JUPYTERHUB_HOST_SHARED_CONTENT=.*|JUPYTERHUB_HOST_SHARED_CONTENT=$REPO_ROOT/infrastructure/content/sample-notebooks|" "$TARGET_FILE"
-    sed -i "s|^JUPYTERHUB_HOST_SINGLEUSER_CONFIG=.*|JUPYTERHUB_HOST_SINGLEUSER_CONFIG=$REPO_ROOT/infrastructure/lab/jupyterlab/singleuser-config|" "$TARGET_FILE"
-fi
+# 2. Force update or append essential path keys
+KEYS_TO_ENSURE=(
+    "LLBRIDGE_PROJECT_ROOT=$REPO_ROOT"
+    "JUPYTERHUB_HOST_WORKSPACES=$REPO_ROOT/infrastructure/data/lab-workspaces"
+    "JUPYTERHUB_HOST_SHARED_CONTENT=$REPO_ROOT/infrastructure/content/sample-notebooks"
+    "JUPYTERHUB_HOST_SINGLEUSER_CONFIG=$REPO_ROOT/infrastructure/lab/jupyterlab/singleuser-config"
+)
+
+for pair in "${KEYS_TO_ENSURE[@]}"; do
+    key=$(echo $pair | cut -d'=' -f1)
+    value=$(echo $pair | cut -d'=' -f2-)
+    if grep -q "^$key=" "$TARGET_FILE"; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|^$key=.*|$key=$value|" "$TARGET_FILE"
+        else
+            sed -i "s|^$key=.*|$key=$value|" "$TARGET_FILE"
+        fi
+    else
+        echo "$key=$value" >> "$TARGET_FILE"
+    fi
+done
 
 echo "Successfully synced environment paths to: $REPO_ROOT"
