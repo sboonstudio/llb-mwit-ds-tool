@@ -109,8 +109,21 @@ async function main() {
       console.log('(No administrators found)');
     } else {
       topAdmins.forEach((admin, index) => {
-        const date = admin.createdAt ? admin.createdAt.split('T')[0] : 'N/A';
-        console.log(`${index + 1}. ${admin.email.padEnd(25)} | ${admin.name || 'N/A'.padEnd(12)} | ${date}`);
+        let dateStr = 'N/A';
+        if (admin.createdAt) {
+          try {
+            // Handle both string ISO dates and numeric timestamps/Date objects
+            const d = new Date(admin.createdAt);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.toISOString().split('T')[0];
+            } else {
+              dateStr = String(admin.createdAt).split(' ')[0];
+            }
+          } catch (e) {
+            dateStr = 'Error';
+          }
+        }
+        console.log(`${index + 1}. ${admin.email.padEnd(25)} | ${(admin.name || 'N/A').padEnd(12)} | ${dateStr}`);
       });
     }
     console.log('--------------------------------------\n');
