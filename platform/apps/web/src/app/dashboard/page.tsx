@@ -99,32 +99,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {isPublic && (
-          <div className="mb-8 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                🌐
-              </span>
-              <div>
-                <h3 className="text-sm font-semibold text-indigo-900">
-                  Public Access Enabled
-                </h3>
-                <p className="text-sm text-indigo-700">
-                  Your lab is accessible at:{" "}
-                  <a
-                    href={currentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900"
-                  >
-                    {currentUrl}
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* Action & Metrics Cards */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
           <section className={`rounded-lg border p-6 ${
             session.user.role === "GUEST" ? "border-slate-200 bg-slate-50" : "border-blue-200 bg-blue-50"
@@ -185,7 +160,7 @@ export default async function DashboardPage() {
           </section>
         </div>
 
-        {/* New Personal Analytics Section */}
+        {/* Analytics Summary */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Code Runs</p>
@@ -201,9 +176,69 @@ export default async function DashboardPage() {
             </div>
         </div>
 
-        <div className="mb-8">
-          <ChangePasswordForm />
-        </div>
+        {/* System Access & Security Section */}
+        <section className="mb-8 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <details className="group">
+                <summary className="flex cursor-pointer items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors list-none">
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 text-sm">
+                            ⚙️
+                        </span>
+                        <div>
+                            <h3 className="font-semibold text-slate-800 text-sm">System Access & Security</h3>
+                            <p className="text-[10px] text-slate-400">Manage your connection and account security</p>
+                        </div>
+                    </div>
+                    <svg className="h-4 w-4 text-slate-300 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                
+                <div className="border-t border-slate-100 bg-slate-50/30 p-6">
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                        {/* Connection Info */}
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Connectivity</h4>
+                            {isPublic ? (
+                                <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-xl">🌐</span>
+                                        <div>
+                                            <p className="text-sm font-semibold text-indigo-900">Public Access Enabled</p>
+                                            <p className="text-xs text-indigo-700 mt-1">Your lab is accessible via Cloudflare Tunnel at:</p>
+                                            <a
+                                                href={currentUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-block mt-2 font-mono text-[10px] bg-white/50 px-2 py-1 rounded border border-indigo-200 text-indigo-800 hover:bg-white"
+                                            >
+                                                {currentUrl}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="rounded-lg border border-slate-100 bg-white p-4">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-xl">🏠</span>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-700">Local Access Only</p>
+                                            <p className="text-xs text-slate-500 mt-1">You are currently connected via local network.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Password Management */}
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Security</h4>
+                            <ChangePasswordForm />
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </section>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-6 py-4">
