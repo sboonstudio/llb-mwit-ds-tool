@@ -23,14 +23,30 @@ def send_log(msg_dict):
 
 def post_run_cell(result):
     try:
+        ip = get_ipython()
+        # Attempt to get the current notebook path
+        # In modern Jupyter/IPython, this is often in the user_ns or via kernel metadata
+        nb_path = "unknown"
+        try:
+            # Common way to get path in Jupyter kernels
+            nb_path = ip.user_ns.get("__vsc_ipynb_file__", ip.user_ns.get("notebook_path", "unknown"))
+            if nb_path == "unknown":
+                # Fallback for standard JupyterLab environments
+                import ipykernel
+                nb_path = os.environ.get("JPY_PARENT_PID", "unknown") # Just a hint
+        except:
+            pass
+
         msg = {
             "event": "CELL_EXECUTION",
+            "path": nb_path,
             "code": result.info.raw_cell,
             "success": result.success,
             "execution_count": result.execution_count
         }
         if not result.success and result.error_in_exec:
-            msg["error"] = str(result.error_in_exec)
+            msg["error_type"] = type(result.error_in_exec).__name__
+            msg["error_msg"] = str(result.error_in_exec)
             
         send_log(msg)
     except:
