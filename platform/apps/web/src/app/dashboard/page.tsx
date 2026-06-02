@@ -238,38 +238,65 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Analytics Summary */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Code Runs</p>
-                <p className="text-2xl font-bold text-slate-800">{stats.totalExecutions}</p>
+        {/* Learning Progress Intelligence Center */}
+        <section className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </span>
+              <h2 className="text-sm font-bold uppercase tracking-tight text-slate-800">Learning Progress Intelligence</h2>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Success Rate</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.successRate}%</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Most Used File</p>
-                <p className="truncate text-lg font-bold text-slate-800" title={stats.mostActiveFile}>{stats.mostActiveFile}</p>
-            </div>
-        </div>
-
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-6 py-4">
-            <h3 className="font-semibold text-slate-800">Recent Activity Insights</h3>
-            <span className="text-xs text-slate-500">Showing last 20 events</span>
+            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">BEHAVIORAL INSIGHTS</span>
           </div>
-          
-          <div className="divide-y divide-slate-100">
-            {logs.length > 0 ? (
-                logs.map((log) => (
-                    <ActivityItem key={log.id} log={log} />
-                ))
-            ) : (
-                <div className="py-12 text-center text-sm text-slate-400 italic">
-                    No activity recorded yet. Start your lab to see insights!
+
+          <div className="p-6">
+            {/* Top KPI Metrics Row */}
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-indigo-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Code Runs</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-3xl font-black text-slate-800">{stats.totalExecutions}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">executions</span>
+                    </div>
                 </div>
-            )}
+                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-emerald-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Success Rate</p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-3xl font-black text-emerald-600">{stats.successRate}%</span>
+                        <span className="text-[10px] text-emerald-400 font-medium">accuracy</span>
+                    </div>
+                </div>
+                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-blue-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Most Used File</p>
+                    <div className="mt-1">
+                        <p className="truncate text-lg font-bold text-slate-800" title={stats.mostActiveFile}>{stats.mostActiveFile}</p>
+                        <p className="text-[10px] text-blue-400 font-medium">active workspace</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Detailed Activity Insights */}
+            <div className="rounded-xl border border-slate-100 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-50 px-5 py-3">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Recent Activity Insights</h3>
+                    <span className="text-[9px] text-slate-400">LAST 20 EVENTS</span>
+                </div>
+                
+                <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
+                    {logs.length > 0 ? (
+                        logs.map((log) => (
+                            <ActivityItem key={log.id} log={log} />
+                        ))
+                    ) : (
+                        <div className="py-12 text-center text-sm text-slate-400 italic">
+                            No activity patterns detected yet.
+                        </div>
+                    )}
+                </div>
+            </div>
           </div>
         </section>
       </main>
