@@ -13,6 +13,11 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, SUCCESS, ERROR
   const [filterType, setFilterType] = useState("ALL"); // ALL, CELL_EXECUTION, SHELL_CMD, OTHER
+  
+  // New State for Preferences
+  const [isCompact, setIsCompact] = useState(false);
+  const [showSystemEvents, setShowSystemEvents] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const filteredLogs = useMemo(() => {
     return initialLogs.filter((log) => {
@@ -20,6 +25,10 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
       try {
         details = log.details ? JSON.parse(log.details) : {};
       } catch (e) {}
+
+      // 0. System Events Preference
+      const isSystem = log.action !== "CELL_EXECUTION" && log.action !== "SHELL_CMD";
+      if (!showSystemEvents && isSystem) return false;
 
       // 1. Status Filter
       if (filterStatus === "SUCCESS" && details.success === false) return false;
@@ -39,7 +48,7 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
 
       return matchAction || matchCode || matchCmd || matchPath;
     });
-  }, [initialLogs, search, filterStatus, filterType]);
+  }, [initialLogs, search, filterStatus, filterType, showSystemEvents]);
 
   return (
     <div className="rounded-xl border border-slate-100 bg-white">
@@ -87,20 +96,57 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
             <option value="OTHER">SYSTEM</option>
           </select>
 
-          <span className="ml-2 hidden text-[9px] font-bold text-slate-400 md:block uppercase tracking-tighter">
-            {filteredLogs.length} OF {initialLogs.length} SHOWN
-          </span>
+          {/* Properties Toggle */}
+          <button 
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${
+                isSettingsOpen ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+            }`}
+            title="Insights Properties"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Settings Sub-Panel */}
+      {isSettingsOpen && (
+        <div className="flex flex-wrap items-center gap-6 bg-slate-50/50 px-6 py-3 border-b border-slate-50 animate-in fade-in slide-in-from-top-1 duration-200">
+            <label className="flex cursor-pointer items-center gap-2 group">
+                <input 
+                    type="checkbox" 
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
+                    checked={isCompact}
+                    onChange={(e) => setIsCompact(e.target.checked)}
+                />
+                <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-700 uppercase tracking-tight">Compact View</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 group">
+                <input 
+                    type="checkbox" 
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
+                    checked={showSystemEvents}
+                    onChange={(e) => setShowSystemEvents(e.target.checked)}
+                />
+                <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-700 uppercase tracking-tight">Show System Events</span>
+            </label>
+            <div className="ml-auto text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                {filteredLogs.length} OF {initialLogs.length} SHOWN
+            </div>
+        </div>
+      )}
 
       <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
         {filteredLogs.length > 0 ? (
           filteredLogs.map((log) => (
-            <ActivityItem key={log.id} log={log} />
+            <ActivityItem key={log.id} log={log} isCompact={isCompact} />
           ))
         ) : (
           <div className="py-12 text-center text-sm text-slate-400 italic">
-            {search || filterStatus !== "ALL" || filterType !== "ALL" 
+            {search || filterStatus !== "ALL" || filterType !== "ALL" || !showSystemEvents
                 ? "No matches found for your filters." 
                 : "No activity patterns detected yet."}
           </div>
@@ -110,7 +156,7 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
   );
 }
 
-function ActivityItem({ log }: { log: any }) {
+function ActivityItem({ log, isCompact }: { log: any, isCompact: boolean }) {
     let details: any = null;
     try {
         details = log.details ? JSON.parse(log.details) : null;
@@ -119,6 +165,58 @@ function ActivityItem({ log }: { log: any }) {
     const isError = details?.success === false;
     const isCode = log.action === "CELL_EXECUTION";
     const isShell = log.action === "SHELL_CMD";
+
+    const content = (
+        <div className="border-t border-slate-50 bg-slate-50/30 px-6 py-4 text-xs">
+            {isCode && (
+                <div className="space-y-2">
+                    <p className="font-bold text-slate-500 uppercase tracking-tighter">Executed Code:</p>
+                    <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-300">
+                        <code>{details?.code}</code>
+                    </pre>
+                </div>
+            )}
+            {isShell && (
+                <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-mono">$</span>
+                    <code className="text-slate-700 font-bold">{details?.cmd}</code>
+                </div>
+            )}
+            {isError && (
+                <div className="mt-2 rounded-md border border-red-100 bg-red-50/50 p-3 text-red-700">
+                    <p className="font-bold">{details?.error_type}</p>
+                    <p className="font-mono mt-1 text-[10px] whitespace-pre-wrap">{details?.error_msg}</p>
+                </div>
+            )}
+            {!isCode && !isShell && !isError && (
+                <p className="text-slate-500 italic">No additional details available.</p>
+            )}
+        </div>
+    );
+
+    if (isCompact) {
+        return (
+            <div className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                        isError ? "bg-red-100 text-red-600" : 
+                        isCode ? "bg-blue-100 text-blue-600" :
+                        isShell ? "bg-amber-100 text-amber-600" :
+                        "bg-slate-100 text-slate-600"
+                    }`}>
+                        {isError ? "!" : isCode ? "PY" : isShell ? ">_" : "i"}
+                    </span>
+                    <p className={`text-xs font-medium truncate ${isError ? "text-red-700" : "text-slate-700"}`}>
+                        {log.action}
+                        {details?.path && <span className="ml-2 text-[10px] font-normal text-slate-400">/ {details.path.split('/').pop()}</span>}
+                    </p>
+                </div>
+                <p className="text-[9px] font-bold text-slate-300 uppercase">
+                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+            </div>
+        );
+    }
 
     return (
         <details className="group">
@@ -153,31 +251,7 @@ function ActivityItem({ log }: { log: any }) {
                     </svg>
                 </div>
             </summary>
-            <div className="border-t border-slate-50 bg-slate-50/30 px-6 py-4 text-xs">
-                {isCode && (
-                    <div className="space-y-2">
-                        <p className="font-bold text-slate-500 uppercase tracking-tighter">Executed Code:</p>
-                        <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-300">
-                            <code>{details?.code}</code>
-                        </pre>
-                    </div>
-                )}
-                {isShell && (
-                    <div className="flex gap-2 items-center">
-                        <span className="text-slate-400 font-mono">$</span>
-                        <code className="text-slate-700 font-bold">{details?.cmd}</code>
-                    </div>
-                )}
-                {isError && (
-                    <div className="mt-2 rounded-md border border-red-100 bg-red-50/50 p-3 text-red-700">
-                        <p className="font-bold">{details?.error_type}</p>
-                        <p className="font-mono mt-1 text-[10px] whitespace-pre-wrap">{details?.error_msg}</p>
-                    </div>
-                )}
-                {!isCode && !isShell && !isError && (
-                    <p className="text-slate-500 italic">No additional details available.</p>
-                )}
-            </div>
+            {content}
         </details>
     );
 }
