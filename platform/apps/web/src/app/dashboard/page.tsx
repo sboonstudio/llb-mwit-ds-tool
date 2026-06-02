@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
 import ActivityIntelligence from "@/components/ActivityIntelligence";
+import EditNameForm from "@/components/EditNameForm";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export default async function DashboardPage() {
   });
 
   const isPublic = !host.includes("localhost") && !host.includes("127.0.0.1");
+  const canEditName = session.user.role !== "GUEST" || session.user.role === "ADMIN";
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-950">
@@ -110,9 +112,7 @@ export default async function DashboardPage() {
               }`}>
                 {session.user.role || "STUDENT"}
               </span>
-              <span className="text-sm text-slate-600">
-                {session.user.name || session.user.email}
-              </span>
+              <EditNameForm initialName={session.user.name || session.user.email || ""} canEdit={canEditName} />
             </div>
             <div className="flex gap-2">
               {session.user.role === "ADMIN" && (
@@ -221,7 +221,7 @@ export default async function DashboardPage() {
                 <summary className="flex cursor-pointer items-center justify-between list-none">
                   <div className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors">
                     <span className="text-sm">🛡️</span>
-                    <span className="text-xs font-bold uppercase tracking-wider">Advanced Security Settings</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Account & Security Settings</span>
                   </div>
                   <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-open:rotate-180 transition-transform shadow-sm">
                     <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -229,9 +229,24 @@ export default async function DashboardPage() {
                     </svg>
                   </div>
                 </summary>
-                <div className="mt-6 max-w-md animate-in fade-in slide-in-from-top-2 duration-300">
-                   <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-6">
-                      <ChangePasswordForm />
+                <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 rounded-lg border border-slate-100 bg-slate-50/50 p-6">
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Profile Management</h4>
+                        <div className="rounded-md border border-slate-200 bg-white p-4">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Display Name</p>
+                            <EditNameForm initialName={session.user.name || session.user.email || ""} canEdit={canEditName} />
+                            <p className="mt-2 text-[9px] text-slate-400 leading-tight">
+                                * Name must be unique and at least 2 characters. Only STUDENT roles and above can change their name.
+                            </p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Password Recovery</h4>
+                        <div className="rounded-md border border-slate-200 bg-white p-4">
+                            <ChangePasswordForm />
+                        </div>
+                      </div>
                    </div>
                 </div>
               </details>
