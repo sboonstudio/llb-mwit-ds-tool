@@ -21,8 +21,34 @@ export default async function DashboardPage() {
   const logs = await prisma.activityLog.findMany({
     where: { userId: session.user.id },
     orderBy: { timestamp: "desc" },
-    take: 10,
+    take: 20,
   });
+
+  // Calculate quick stats for the user
+  const stats = {
+    totalExecutions: logs.filter(l => l.action === "CELL_EXECUTION").length,
+    successRate: 0,
+    mostActiveFile: "N/A"
+  };
+
+  const executions = logs.filter(l => l.action === "CELL_EXECUTION");
+  if (executions.length > 0) {
+    const successCount = executions.filter(l => {
+        try {
+            return JSON.parse(l.details || "{}").success !== false;
+        } catch(e) { return true; }
+    }).length;
+    stats.successRate = Math.round((successCount / executions.length) * 100);
+    
+    const fileCounts: Record<string, number> = {};
+    executions.forEach(l => {
+        try {
+            const path = JSON.parse(l.details || "{}").path || "unknown";
+            fileCounts[path] = (fileCounts[path] || 0) + 1;
+        } catch(e) {}
+    });
+    stats.mostActiveFile = Object.entries(fileCounts).sort((a, b) => b[1] - a[1])[0]?.[0].split('/').pop() || "N/A";
+  }
 
   const latestUsage = await prisma.resourceUsage.findFirst({
     where: { userId: session.user.id },
@@ -159,51 +185,117 @@ export default async function DashboardPage() {
           </section>
         </div>
 
+        {/* New Personal Analytics Section */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Code Runs</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.totalExecutions}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Success Rate</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.successRate}%</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Most Used File</p>
+                <p className="truncate text-lg font-bold text-slate-800" title={stats.mostActiveFile}>{stats.mostActiveFile}</p>
+            </div>
+        </div>
+
         <div className="mb-8">
           <ChangePasswordForm />
         </div>
 
-        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h3 className="text-lg font-medium">Recent Activity</h3>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-6 py-4">
+            <h3 className="font-semibold text-slate-800">Recent Activity Insights</h3>
+            <span className="text-xs text-slate-500">Showing last 20 events</span>
           </div>
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Timestamp
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {logs.length > 0 ? (
+          
+          <div className="divide-y divide-slate-100">
+            {logs.length > 0 ? (
                 logs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-900">
-                      {log.action}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                  </tr>
+                    <ActivityItem key={log.id} log={log} />
                 ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={2}
-                    className="px-6 py-4 text-center text-sm text-slate-500"
-                  >
-                    No activity found yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            ) : (
+                <div className="py-12 text-center text-sm text-slate-400 italic">
+                    No activity recorded yet. Start your lab to see insights!
+                </div>
+            )}
+          </div>
         </section>
       </main>
     </div>
   );
+}
+
+function ActivityItem({ log }: { log: any }) {
+    let details: any = null;
+    try {
+        details = log.details ? JSON.parse(log.details) : null;
+    } catch(e) {}
+
+    const isError = details?.success === false;
+    const isCode = log.action === "CELL_EXECUTION";
+    const isShell = log.action === "SHELL_CMD";
+
+    return (
+        <details className="group">
+            <summary className="flex cursor-pointer items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors list-none">
+                <div className="flex items-center gap-4">
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                        isError ? "bg-red-100 text-red-600" : 
+                        isCode ? "bg-blue-100 text-blue-600" :
+                        isShell ? "bg-amber-100 text-amber-600" :
+                        "bg-slate-100 text-slate-600"
+                    }`}>
+                        {isError ? "!" : isCode ? "PY" : isShell ? ">_" : "i"}
+                    </span>
+                    <div>
+                        <p className={`text-sm font-medium ${isError ? "text-red-700" : "text-slate-700"}`}>
+                            {log.action}
+                            {details?.path && <span className="ml-2 text-xs font-normal text-slate-400">in {details.path.split('/').pop()}</span>}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                            {new Date(log.timestamp).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {details?.error_type && (
+                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500 uppercase">
+                            {details.error_type}
+                        </span>
+                    )}
+                    <svg className="h-4 w-4 text-slate-300 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </summary>
+            <div className="border-t border-slate-50 bg-slate-50/30 px-6 py-4 text-xs">
+                {isCode && (
+                    <div className="space-y-2">
+                        <p className="font-bold text-slate-500 uppercase tracking-tighter">Executed Code:</p>
+                        <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-300">
+                            <code>{details?.code}</code>
+                        </pre>
+                    </div>
+                )}
+                {isShell && (
+                    <div className="flex gap-2 items-center">
+                        <span className="text-slate-400 font-mono">$</span>
+                        <code className="text-slate-700 font-bold">{details?.cmd}</code>
+                    </div>
+                )}
+                {isError && (
+                    <div className="mt-2 rounded-md border border-red-100 bg-red-50/50 p-3 text-red-700">
+                        <p className="font-bold">{details?.error_type}</p>
+                        <p className="font-mono mt-1">{details?.error_msg}</p>
+                    </div>
+                )}
+                {!isCode && !isShell && !isError && (
+                    <p className="text-slate-500 italic">No additional details available.</p>
+                )}
+            </div>
+        </details>
+    );
 }
