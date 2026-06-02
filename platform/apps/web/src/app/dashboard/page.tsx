@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
+import ActivityIntelligence from "@/components/ActivityIntelligence";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -278,25 +279,8 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* Detailed Activity Insights */}
-            <div className="rounded-xl border border-slate-100 bg-white">
-                <div className="flex items-center justify-between border-b border-slate-50 px-5 py-3">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Recent Activity Insights</h3>
-                    <span className="text-[9px] text-slate-400">LAST 20 EVENTS</span>
-                </div>
-                
-                <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
-                    {logs.length > 0 ? (
-                        logs.map((log) => (
-                            <ActivityItem key={log.id} log={log} />
-                        ))
-                    ) : (
-                        <div className="py-12 text-center text-sm text-slate-400 italic">
-                            No activity patterns detected yet.
-                        </div>
-                    )}
-                </div>
-            </div>
+            {/* Detailed Activity Insights with Search & Filter */}
+            <ActivityIntelligence initialLogs={logs} />
           </div>
         </section>
       </main>
