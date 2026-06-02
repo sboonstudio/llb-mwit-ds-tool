@@ -27,12 +27,24 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   activityLogs  ActivityLog[]
+  resourceUsage ResourceUsage[]
 }
 
 model ActivityLog {
   id        String   @id @default(cuid())
   userId    String
-  action    String   // e.g., "JupyterLab Access"
+  action    String   // e.g., "LOGIN", "LOGOUT", "SPAWN_LAB", "STOP_LAB"
+  details   String?  // Optional JSON string for extra data
+  ipAddress String?
   timestamp DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ResourceUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  cpuUsage    Float    // CPU percentage
+  memoryUsage Float    // Memory in MB
+  recordedAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

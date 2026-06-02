@@ -24,6 +24,11 @@ export default async function DashboardPage() {
     take: 10,
   });
 
+  const latestUsage = await prisma.resourceUsage.findFirst({
+    where: { userId: session.user.id },
+    orderBy: { recordedAt: "desc" },
+  });
+
   const isPublic = !host.includes("localhost") && !host.includes("127.0.0.1");
 
   return (
@@ -131,14 +136,25 @@ export default async function DashboardPage() {
           </section>
 
           <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-            <h2 className="mb-2 text-xl font-semibold text-emerald-900">
-              Usage Summary
+            <h2 className="mb-4 text-xl font-semibold text-emerald-900">
+              Resource Usage
             </h2>
-            <p className="text-4xl font-semibold text-emerald-800">
-              {logs.length}
-            </p>
-            <p className="mt-2 text-sm text-emerald-700">
-              Lab access records shown below
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-emerald-600 uppercase">Latest CPU</p>
+                <p className="text-2xl font-bold text-emerald-800">
+                  {latestUsage ? `${latestUsage.cpuUsage.toFixed(1)}%` : "0.0%"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-600 uppercase">Latest RAM</p>
+                <p className="text-2xl font-bold text-emerald-800">
+                  {latestUsage ? `${latestUsage.memoryUsage.toFixed(0)} MB` : "0 MB"}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-emerald-600 italic">
+              * Stats recorded at the end of your last session.
             </p>
           </section>
         </div>

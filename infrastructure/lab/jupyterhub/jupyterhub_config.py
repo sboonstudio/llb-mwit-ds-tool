@@ -78,6 +78,39 @@ def repair_existing_workspace(user_dir):
     apply_user_ownership(marker)
 
 
+async def report_usage(type, username, action=None, details=None, metrics=None):
+    secret = os.environ.get("JUPYTERHUB_SHARED_SECRET")
+    # Use internal service name for communication within Docker
+    web_url = "http://llbridge-web:3000"
+    api_url = f"{web_url}/api/jupyter/report"
+    
+    payload = {
+        "type": type,
+        "username": username,
+        "action": action,
+        "details": details,
+        "metrics": metrics
+    }
+    
+    from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+    import json
+    
+    client = AsyncHTTPClient()
+    try:
+        req = HTTPRequest(
+            api_url,
+            method="POST",
+            body=json.dumps(payload),
+            headers={
+                "Authorization": f"Bearer {secret}",
+                "Content-Type": "application/json"
+            },
+            validate_cert=False
+        )
+        await client.fetch(req)
+    except Exception as e:
+        print(f"Failed to report usage for {username}: {e}")
+
 async def prepare_user_workspace(spawner):
     auth_state = await spawner.user.get_auth_state()
     role = (auth_state or {}).get("role", "STUDENT")
@@ -108,6 +141,61 @@ async def prepare_user_workspace(spawner):
         )
     apply_user_ownership(readme)
     repair_existing_workspace(user_dir)
+    
+    # Report Lab Spawn
+    await report_usage("ACTIVITY", username, action="LAB_SPAWN", details={"role": role})
+
+async def initialize_instrumentation(spawner):
+    """Run setup.sh inside the container after it starts"""
+    username = spawner.user.name
+    try:
+        # Use docker exec to run setup.sh
+        # We might need to wait a few seconds for the container to be fully ready
+        import asyncio
+        await asyncio.sleep(2)
+        
+        container_id = spawner.container_id
+        if container_id:
+            client = spawner.client
+            # Note: /opt/llbridge/instrumentation/setup.sh is mounted via volumes
+            exec_res = client.containers.get(container_id).exec_run(
+                "/bin/bash /opt/llbridge/instrumentation/setup.sh",
+                user="root" # Run setup as root to allow chown/mkdir if needed
+            )
+            print(f"Instrumentation initialized for {username}: {exec_res.exit_code}")
+    except Exception as e:
+        print(f"Failed to initialize instrumentation for {username}: {e}")
+
+async def clean_up_after_stop(spawner):
+    username = spawner.user.name
+    metrics = {"cpu": 0, "memory": 0}
+    
+    try:
+        # Try to get stats from the container before it's fully gone
+        # Note: spawner.container_id should still be available
+        if spawner.container_id:
+            # DockerSpawner uses docker-py (synchronous)
+            # We run it in a thread if needed, but for a single shot it's usually okay
+            client = spawner.client
+            container = client.containers.get(spawner.container_id)
+            stats = container.stats(stream=False)
+            
+            # Memory Usage in MB
+            mem_usage = stats['memory_stats'].get('usage', 0)
+            metrics['memory'] = round(mem_usage / (1024 * 1024), 2)
+            
+            # CPU Usage (Simplified delta calculation)
+            cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+            system_delta = stats['cpu_stats'].get('system_cpu_usage', 0) - stats['precpu_stats'].get('system_cpu_usage', 0)
+            
+            if system_delta > 0 and cpu_delta > 0:
+                metrics['cpu'] = round((cpu_delta / system_delta) * len(stats['cpu_stats']['cpu_usage'].get('percpu_usage', [1])) * 100.0, 2)
+    except Exception as e:
+        # It's common for this to fail if the container is already removed
+        pass
+        
+    await report_usage("ACTIVITY", username, action="LAB_STOP")
+    await report_usage("METRICS", username, metrics=metrics)
 
 
 c.JupyterHub.authenticator_class = LLBridgeAuthenticator
@@ -162,9 +250,20 @@ c.DockerSpawner.volumes = {
         "bind": "/opt/conda/share/jupyter/lab/settings/overrides.json",
         "mode": "ro",
     },
+    f"{env('LLBRIDGE_PROJECT_ROOT')}/infrastructure/lab/jupyterlab/instrumentation": {
+        "bind": "/opt/llbridge/instrumentation",
+        "mode": "ro",
+    },
+}
+
+c.DockerSpawner.environment = {
+    "LLBRIDGE_LOG_HOST": "llbridge-log-collector",
+    "LLBRIDGE_LOG_PORT": "514"
 }
 
 c.Spawner.pre_spawn_hook = prepare_user_workspace
+c.Spawner.post_spawn_hook = initialize_instrumentation
+c.Spawner.post_stop_hook = clean_up_after_stop
 c.Spawner.default_url = "/lab"
 c.Spawner.start_timeout = env_int("JUPYTERHUB_START_TIMEOUT", 900)
 c.Spawner.http_timeout = env_int("JUPYTERHUB_HTTP_TIMEOUT", 120)

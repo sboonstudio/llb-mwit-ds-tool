@@ -18,6 +18,10 @@ export default async function AdminPage() {
       _count: {
         select: { activityLogs: true },
       },
+      resourceUsage: {
+        orderBy: { recordedAt: "desc" },
+        take: 1,
+      }
     },
   });
 
