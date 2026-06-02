@@ -134,92 +134,109 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Account Security Section (Top-aligned) */}
-        <section className="mb-8 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <details className="group">
-                <summary className="flex cursor-pointer items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors list-none">
-                    <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 text-sm">
-                            🛡️
-                        </span>
-                        <div>
-                            <h3 className="font-semibold text-slate-800 text-sm">Security & Password</h3>
-                            <p className="text-[10px] text-slate-400">Manage your credentials and access safety</p>
-                        </div>
-                    </div>
-                    <svg className="h-4 w-4 text-slate-300 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </summary>
-                
-                <div className="border-t border-slate-100 bg-slate-50/30 p-6">
-                    <div className="max-w-md">
-                        <ChangePasswordForm />
-                    </div>
+        {/* Lab Management Hub */}
+        <section className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </span>
+              <h2 className="text-sm font-bold uppercase tracking-tight text-slate-800">Lab Management Hub</h2>
+            </div>
+            <div className="flex items-center gap-4">
+               <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  SYSTEM READY
+               </span>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Primary Action: Launch Lab */}
+              <div className="lg:col-span-2">
+                <div className={`h-full rounded-xl border p-6 transition-all ${
+                  session.user.role === "GUEST" ? "border-slate-100 bg-slate-50/50" : "border-blue-100 bg-blue-50/50 hover:border-blue-200"
+                }`}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className={`text-lg font-bold ${session.user.role === "GUEST" ? "text-slate-700" : "text-blue-900"}`}>
+                      Workbench Launch
+                    </h3>
+                    <span className="text-[10px] font-mono text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded">
+                      ID: {session.user.id.slice(0, 8)}
+                    </span>
+                  </div>
+                  <p className={`mb-6 text-sm leading-relaxed ${session.user.role === "GUEST" ? "text-slate-500" : "text-blue-700/80"}`}>
+                    {session.user.role === "GUEST" 
+                      ? "Your account is currently in 'Guest' mode. Please contact an admin for workspace activation."
+                      : "Start your private JupyterLab session. All your files and notebooks will be automatically preserved across sessions."
+                    }
+                  </p>
+                  {session.user.role === "GUEST" ? (
+                    <button disabled className="inline-flex h-11 w-full cursor-not-allowed items-center justify-center rounded-lg bg-slate-300 px-6 text-sm font-bold text-white">
+                      Awaiting Activation
+                    </button>
+                  ) : (
+                    <a
+                      href="/api/jupyter"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-6 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300"
+                    >
+                      🚀 Open Your Lab
+                    </a>
+                  )}
                 </div>
-            </details>
-        </section>
-
-        {/* Action & Metrics Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <section className={`rounded-lg border p-6 ${
-            session.user.role === "GUEST" ? "border-slate-200 bg-slate-50" : "border-blue-200 bg-blue-50"
-          }`}>
-            <h2 className={`mb-2 text-xl font-semibold ${
-              session.user.role === "GUEST" ? "text-slate-900" : "text-blue-900"
-            }`}>
-              Launch JupyterLab
-            </h2>
-            <p className={`mb-5 text-sm leading-6 ${
-              session.user.role === "GUEST" ? "text-slate-600" : "text-blue-700"
-            }`}>
-              {session.user.role === "GUEST" 
-                ? "Your account is pending approval. Please wait for an administrator to grant you access before launching the lab."
-                : "Open your isolated JupyterLab container. Your work folder is private, and shared course files are mounted read-only."
-              }
-            </p>
-            {session.user.role === "GUEST" ? (
-              <button
-                disabled
-                className="inline-flex h-11 cursor-not-allowed items-center rounded-md bg-slate-300 px-5 text-sm font-semibold text-white"
-              >
-                Access Locked
-              </button>
-            ) : (
-              <a
-                href="/api/jupyter"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center rounded-md bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800"
-              >
-                Open JupyterLab
-              </a>
-            )}
-          </section>
-
-          <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-            <h2 className="mb-4 text-xl font-semibold text-emerald-900">
-              Resource Usage
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-emerald-600 uppercase">Latest CPU</p>
-                <p className="text-2xl font-bold text-emerald-800">
-                  {latestUsage ? `${latestUsage.cpuUsage.toFixed(1)}%` : "0.0%"}
-                </p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-600 uppercase">Latest RAM</p>
-                <p className="text-2xl font-bold text-emerald-800">
-                  {latestUsage ? `${latestUsage.memoryUsage.toFixed(0)} MB` : "0 MB"}
-                </p>
+
+              {/* Status Section: Resource Usage */}
+              <div className="space-y-4">
+                <div className="h-full rounded-xl border border-emerald-100 bg-emerald-50/30 p-6">
+                  <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-emerald-700">
+                    Live Status
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
+                    <div className="flex items-center justify-between rounded-lg bg-white/50 p-3 border border-emerald-100/50">
+                      <span className="text-[10px] font-bold text-emerald-600">CPU LOAD</span>
+                      <span className="text-lg font-black text-emerald-900">{latestUsage ? `${latestUsage.cpuUsage.toFixed(1)}%` : "0.0%"}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-white/50 p-3 border border-emerald-100/50">
+                      <span className="text-[10px] font-bold text-emerald-600">RAM USAGE</span>
+                      <span className="text-lg font-black text-emerald-900">{latestUsage ? `${latestUsage.memoryUsage.toFixed(0)} MB` : "0 MB"}</span>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-[9px] text-emerald-600/70 italic">
+                    * Metrics captured from last session.
+                  </p>
+                </div>
               </div>
             </div>
-            <p className="mt-4 text-xs text-emerald-600 italic">
-              * Stats recorded at the end of your last session.
-            </p>
-          </section>
-        </div>
+
+            {/* Nested Configuration: Security & Password */}
+            <div className="mt-6 border-t border-slate-100 pt-6">
+              <details className="group">
+                <summary className="flex cursor-pointer items-center justify-between list-none">
+                  <div className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors">
+                    <span className="text-sm">🛡️</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Advanced Security Settings</span>
+                  </div>
+                  <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-open:rotate-180 transition-transform shadow-sm">
+                    <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </summary>
+                <div className="mt-6 max-w-md animate-in fade-in slide-in-from-top-2 duration-300">
+                   <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-6">
+                      <ChangePasswordForm />
+                   </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
 
         {/* Analytics Summary */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
