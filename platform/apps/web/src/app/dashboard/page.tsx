@@ -20,6 +20,16 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  // Fetch fresh user data from DB to ensure name is updated even if session is stale
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true, email: true, role: true }
+  });
+
+  if (!dbUser) {
+    redirect("/login");
+  }
+
   const logs = await prisma.activityLog.findMany({
     where: { userId: session.user.id },
     orderBy: { timestamp: "desc" },
@@ -58,7 +68,7 @@ export default async function DashboardPage() {
   });
 
   const isPublic = !host.includes("localhost") && !host.includes("127.0.0.1");
-  const canEditName = session.user.role !== "GUEST";
+  const canEditName = dbUser.role !== "GUEST";
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-950">
@@ -106,16 +116,16 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-3 sm:items-end">
             <div className="flex items-center gap-2">
               <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${
-                session.user.role === "ADMIN" ? "bg-red-100 text-red-700" :
-                session.user.role === "COACH" ? "bg-purple-100 text-purple-700" :
+                dbUser.role === "ADMIN" ? "bg-red-100 text-red-700" :
+                dbUser.role === "COACH" ? "bg-purple-100 text-purple-700" :
                 "bg-blue-100 text-blue-700"
               }`}>
-                {session.user.role || "STUDENT"}
+                {dbUser.role || "STUDENT"}
               </span>
-              <EditNameForm initialName={session.user.name || session.user.email || ""} canEdit={canEditName} />
+              <EditNameForm initialName={dbUser.name || dbUser.email || ""} canEdit={canEditName} />
             </div>
             <div className="flex gap-2">
-              {session.user.role === "ADMIN" && (
+              {dbUser.role === "ADMIN" && (
                 <a
                   href="/admin"
                   className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -159,23 +169,23 @@ export default async function DashboardPage() {
               {/* Primary Action: Launch Lab */}
               <div className="lg:col-span-2">
                 <div className={`h-full rounded-xl border p-6 transition-all ${
-                  session.user.role === "GUEST" ? "border-slate-100 bg-slate-50/50" : "border-blue-100 bg-blue-50/50 hover:border-blue-200"
+                  dbUser.role === "GUEST" ? "border-slate-100 bg-slate-50/50" : "border-blue-100 bg-blue-50/50 hover:border-blue-200"
                 }`}>
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className={`text-lg font-bold ${session.user.role === "GUEST" ? "text-slate-700" : "text-blue-900"}`}>
+                    <h3 className={`text-lg font-bold ${dbUser.role === "GUEST" ? "text-slate-700" : "text-blue-900"}`}>
                       Workbench Launch
                     </h3>
                     <span className="text-[10px] font-mono text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded">
-                      ID: {session.user.id.slice(0, 8)}
+                      ID: {dbUser.id.slice(0, 8)}
                     </span>
                   </div>
-                  <p className={`mb-6 text-sm leading-relaxed ${session.user.role === "GUEST" ? "text-slate-500" : "text-blue-700/80"}`}>
-                    {session.user.role === "GUEST" 
+                  <p className={`mb-6 text-sm leading-relaxed ${dbUser.role === "GUEST" ? "text-slate-500" : "text-blue-700/80"}`}>
+                    {dbUser.role === "GUEST" 
                       ? "Your account is currently in 'Guest' mode. Please contact an admin for workspace activation."
                       : "Start your private JupyterLab session. All your files and notebooks will be automatically preserved across sessions."
                     }
                   </p>
-                  {session.user.role === "GUEST" ? (
+                  {dbUser.role === "GUEST" ? (
                     <button disabled className="inline-flex h-11 w-full cursor-not-allowed items-center justify-center rounded-lg bg-slate-300 px-6 text-sm font-bold text-white">
                       Awaiting Activation
                     </button>
@@ -235,7 +245,7 @@ export default async function DashboardPage() {
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Profile Management</h4>
                         <div className="rounded-md border border-slate-200 bg-white p-4">
                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Display Name</p>
-                            <EditNameForm initialName={session.user.name || session.user.email || ""} canEdit={canEditName} />
+                            <EditNameForm initialName={dbUser.name || dbUser.email || ""} canEdit={canEditName} />
                             <p className="mt-2 text-[9px] text-slate-400 leading-tight">
                                 * Name must be unique and at least 2 characters. Only STUDENT roles and above can change their name.
                             </p>
@@ -301,76 +311,4 @@ export default async function DashboardPage() {
       </main>
     </div>
   );
-}
-
-function ActivityItem({ log }: { log: any }) {
-    let details: any = null;
-    try {
-        details = log.details ? JSON.parse(log.details) : null;
-    } catch(e) {}
-
-    const isError = details?.success === false;
-    const isCode = log.action === "CELL_EXECUTION";
-    const isShell = log.action === "SHELL_CMD";
-
-    return (
-        <details className="group">
-            <summary className="flex cursor-pointer items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors list-none">
-                <div className="flex items-center gap-4">
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                        isError ? "bg-red-100 text-red-600" : 
-                        isCode ? "bg-blue-100 text-blue-600" :
-                        isShell ? "bg-amber-100 text-amber-600" :
-                        "bg-slate-100 text-slate-600"
-                    }`}>
-                        {isError ? "!" : isCode ? "PY" : isShell ? ">_" : "i"}
-                    </span>
-                    <div>
-                        <p className={`text-sm font-medium ${isError ? "text-red-700" : "text-slate-700"}`}>
-                            {log.action}
-                            {details?.path && <span className="ml-2 text-xs font-normal text-slate-400">in {details.path.split('/').pop()}</span>}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                            {new Date(log.timestamp).toLocaleString()}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {details?.error_type && (
-                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500 uppercase">
-                            {details.error_type}
-                        </span>
-                    )}
-                    <svg className="h-4 w-4 text-slate-300 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
-            </summary>
-            <div className="border-t border-slate-50 bg-slate-50/30 px-6 py-4 text-xs">
-                {isCode && (
-                    <div className="space-y-2">
-                        <p className="font-bold text-slate-500 uppercase tracking-tighter">Executed Code:</p>
-                        <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-300">
-                            <code>{details?.code}</code>
-                        </pre>
-                    </div>
-                )}
-                {isShell && (
-                    <div className="flex gap-2 items-center">
-                        <span className="text-slate-400 font-mono">$</span>
-                        <code className="text-slate-700 font-bold">{details?.cmd}</code>
-                    </div>
-                )}
-                {isError && (
-                    <div className="mt-2 rounded-md border border-red-100 bg-red-50/50 p-3 text-red-700">
-                        <p className="font-bold">{details?.error_type}</p>
-                        <p className="font-mono mt-1">{details?.error_msg}</p>
-                    </div>
-                )}
-                {!isCode && !isShell && !isError && (
-                    <p className="text-slate-500 italic">No additional details available.</p>
-                )}
-            </div>
-        </details>
-    );
 }
