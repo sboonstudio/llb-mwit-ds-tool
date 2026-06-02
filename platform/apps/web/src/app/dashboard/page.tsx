@@ -58,7 +58,7 @@ export default async function DashboardPage() {
   });
 
   const isPublic = !host.includes("localhost") && !host.includes("127.0.0.1");
-  const canEditName = session.user.role !== "GUEST" || session.user.role === "ADMIN";
+  const canEditName = session.user.role !== "GUEST";
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-950">

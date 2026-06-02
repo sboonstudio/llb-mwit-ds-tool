@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { updateUserName } from "@/actions/user";
 
 export default function EditNameForm({ initialName, canEdit }: { initialName: string, canEdit: boolean }) {
-  const [isEditing, setIsCompact] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name === initialName) {
-        setIsCompact(false);
+        setIsEditing(false);
         return;
     }
 
@@ -30,7 +30,7 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
     const result = await updateUserName(name);
     
     if (result?.success) {
-      setIsCompact(false);
+      setIsEditing(false);
     } else {
       setError(result?.error || "Failed to update name");
     }
@@ -58,7 +58,7 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
             </button>
             <button
                 type="button"
-                onClick={() => { setName(initialName); setIsCompact(false); setError(null); }}
+                onClick={() => { setName(initialName); setIsEditing(false); setError(null); }}
                 className="text-[10px] font-bold text-slate-400 hover:text-slate-600"
             >
                 CANCEL
@@ -73,7 +73,7 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
     <div className="flex items-center gap-2 group">
       <span className="text-sm font-medium text-slate-700">{initialName || "Click to add name"}</span>
       <button
-        onClick={() => setIsCompact(true)}
+        onClick={() => setIsEditing(true)}
         className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-indigo-500 hover:text-indigo-700"
       >
         EDIT
