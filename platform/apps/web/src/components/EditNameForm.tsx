@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { updateUserName } from "@/actions/user";
+import { useRouter } from "next/navigation";
 
 export default function EditNameForm({ initialName, canEdit }: { initialName: string, canEdit: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -9,6 +10,7 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
   const [displayName, setDisplayName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Sync state if initialName changes (prop update from server component)
   React.useEffect(() => {
@@ -41,8 +43,8 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
       setDisplayName(trimmed);
       setName(trimmed);
       setIsEditing(false);
-      // Refresh page to sync other components
-      window.location.reload(); 
+      // Refresh server data to sync other components on the page
+      router.refresh(); 
     } else {
       setError(result?.error || "Failed to update name");
     }
