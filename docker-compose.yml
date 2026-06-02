@@ -79,6 +79,16 @@ services:
     command: tunnel --url http://llbridge-proxy:80
     restart: always
 
+  llbridge-log-collector:
+    image: timberio/vector:latest-alpine
+    volumes:
+      - ./infrastructure/logging/vector.yaml:/etc/vector/vector.yaml:ro
+    environment:
+      - JUPYTERHUB_SHARED_SECRET=${JUPYTERHUB_SHARED_SECRET}
+    ports:
+      - "514:514/udp"
+    restart: always
+
 networks:
   default:
     name: ${DOCKER_NETWORK_NAME:-sboon-llb-main-core_default}

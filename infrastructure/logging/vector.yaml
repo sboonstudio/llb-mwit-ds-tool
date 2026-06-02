@@ -1,0 +1,22 @@
+# Vector Configuration for LearnLab Bridge Insight Engine
+
+sources:
+  syslog_server:
+    type: syslog
+    address: 0.0.0.0:514
+    mode: udp
+
+sinks:
+  web_api_sink:
+    type: http
+    inputs:
+      - syslog_server
+    uri: "http://llbridge-web:3000/api/jupyter/report"
+    method: post
+    encoding:
+      codec: json
+    auth:
+      strategy: bearer
+      token: "${JUPYTERHUB_SHARED_SECRET}"
+    # Optional: Transform to match our API expectation if needed
+    # For now, we'll handle the raw syslog format in the API or use a transform here.

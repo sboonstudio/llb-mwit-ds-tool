@@ -13,6 +13,11 @@ type User = {
   _count: {
     activityLogs: number;
   };
+  resourceUsage: {
+    cpuUsage: number;
+    memoryUsage: number;
+    recordedAt: Date;
+  }[];
 };
 
 export default function UserTable({ initialUsers, currentUserId }: { initialUsers: User[], currentUserId: string }) {
@@ -69,6 +74,7 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">User</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Role</th>
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Resource Usage</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Stats</th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Joined</th>
             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Actions</th>
@@ -92,6 +98,22 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                   <option value="STUDENT">STUDENT</option>
                   <option value="GUEST">GUEST</option>
                 </select>
+              </td>
+              <td className="px-6 py-4">
+                {user.resourceUsage && user.resourceUsage.length > 0 ? (
+                  <div className="text-xs space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">CPU:</span>
+                      <span className="font-semibold text-slate-700">{user.resourceUsage[0].cpuUsage.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">RAM:</span>
+                      <span className="font-semibold text-slate-700">{user.resourceUsage[0].memoryUsage.toFixed(0)} MB</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-slate-400 italic">No metrics</span>
+                )}
               </td>
               <td className="px-6 py-4 text-sm text-slate-500">
                 {user._count.activityLogs} activities
