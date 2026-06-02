@@ -6,20 +6,28 @@ import { updateUserName } from "@/actions/user";
 export default function EditNameForm({ initialName, canEdit }: { initialName: string, canEdit: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(initialName);
+  const [displayName, setDisplayName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync state if initialName changes (prop update from server component)
+  React.useEffect(() => {
+    setName(initialName);
+    setDisplayName(initialName);
+  }, [initialName]);
 
   if (!canEdit) {
     return (
         <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-600">{initialName || "No Name"}</span>
+            <span className="text-sm text-slate-600">{displayName || "No Name"}</span>
         </div>
     );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name === initialName) {
+    const trimmed = name.trim();
+    if (trimmed === displayName) {
         setIsEditing(false);
         return;
     }
@@ -27,10 +35,14 @@ export default function EditNameForm({ initialName, canEdit }: { initialName: st
     setLoading(true);
     setError(null);
     
-    const result = await updateUserName(name);
+    const result = await updateUserName(trimmed);
     
     if (result?.success) {
+      setDisplayName(trimmed);
+      setName(trimmed);
       setIsEditing(false);
+      // Refresh page to sync other components
+      window.location.reload(); 
     } else {
       setError(result?.error || "Failed to update name");
     }

@@ -70,8 +70,20 @@ export async function updateUserName(newName: string) {
   }
 
   const trimmedName = newName.trim();
+  
+  // 1. Validation Rules
   if (!trimmedName || trimmedName.length < 2) {
     return { error: "Name must be at least 2 characters long." };
+  }
+  
+  if (trimmedName.length > 50) {
+    return { error: "Name is too long (max 50 characters)." };
+  }
+
+  // Security: Allow only alphanumeric, Thai characters, and spaces (No scripts or special symbols)
+  const nameRegex = /^[a-zA-Z0-9 \u0E00-\u0E7F]+$/;
+  if (!nameRegex.test(trimmedName)) {
+    return { error: "Name contains invalid characters. Use letters, numbers, and spaces only." };
   }
 
   if (trimmedName === user.name) {
@@ -79,20 +91,18 @@ export async function updateUserName(newName: string) {
   }
 
   try {
-    // Check for uniqueness
+    // 2. Case-insensitive Uniqueness Check
     const existingUser = await prisma.user.findFirst({
       where: { 
         name: {
           equals: trimmedName,
-          // Case insensitive comparison for SQLite might need different approach or rely on DB config
-          // but for now we'll do a standard check.
         },
         id: { not: session.user.id }
       }
     });
 
     if (existingUser) {
-      return { error: "This name is already taken. Please choose another one." };
+      return { error: "This name is already used by another member. Please choose a unique name." };
     }
 
     await prisma.user.update({
@@ -100,8 +110,11 @@ export async function updateUserName(newName: string) {
       data: { name: trimmedName }
     });
 
+    // 3. Force cache invalidation for all related pages
     revalidatePath("/dashboard");
-    return { success: true };
+    revalidatePath("/admin");
+    
+    return { success: true, newName: trimmedName };
   } catch (error: any) {
     return { error: "Failed to update name: " + error.message };
   }
