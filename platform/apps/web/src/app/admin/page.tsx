@@ -35,6 +35,12 @@ export default async function AdminPage() {
           </div>
           <div className="flex gap-3">
             <a
+              href="/admin/logs"
+              className="inline-flex h-10 items-center rounded-md border border-amber-300 bg-amber-50 px-4 text-sm font-medium text-amber-700 hover:bg-amber-100"
+            >
+              System Audit Logs
+            </a>
+            <a
               href="/admin/insights"
               className="inline-flex h-10 items-center rounded-md border border-indigo-300 bg-indigo-50 px-4 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
             >
