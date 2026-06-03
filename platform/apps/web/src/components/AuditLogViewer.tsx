@@ -26,10 +26,10 @@ export default function AuditLogViewer() {
     return logs.filter((log) => {
       const searchLower = search.toLowerCase();
       const matchesSearch =
-        log.user?.name?.toLowerCase().includes(searchLower) ||
-        log.user?.email?.toLowerCase().includes(searchLower) ||
+        (log.user?.name?.toLowerCase().includes(searchLower) || false) ||
+        (log.user?.email?.toLowerCase().includes(searchLower) || false) ||
         log.action.toLowerCase().includes(searchLower) ||
-        log.details?.toLowerCase().includes(searchLower);
+        (log.details?.toLowerCase().includes(searchLower) || false);
 
       const matchesAction = filterAction === "ALL" || log.action === filterAction;
 
