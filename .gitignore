@@ -25,7 +25,7 @@ infrastructure/data/
 *.sqlite
 *.sqlite3
 *.log
-logs/
+# logs/ <-- Removed global ignore to allow source folders like src/app/admin/logs
 tmp/
 temp/
 
