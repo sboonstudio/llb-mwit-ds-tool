@@ -32,12 +32,12 @@ model User {
 
 model ActivityLog {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String?
   action    String   // e.g., "LOGIN", "LOGOUT", "SPAWN_LAB", "STOP_LAB"
   details   String?  // Optional JSON string for extra data
   ipAddress String?
   timestamp DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ResourceUsage {

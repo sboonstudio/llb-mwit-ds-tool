@@ -74,13 +74,16 @@ export async function GET() {
     // 4. Most Active Users (by activity count)
     const userActivity = await prisma.activityLog.groupBy({
       by: ["userId"],
+      where: { userId: { not: null } }, // Filter out system/anonymous events
       _count: { _all: true },
       orderBy: { _count: { userId: "desc" } },
       take: 5,
     });
 
+    const userIds = userActivity.map((u) => u.userId).filter((id): id is string => id !== null);
+
     const userDetails = await prisma.user.findMany({
-      where: { id: { in: userActivity.map((u) => u.userId) } },
+      where: { id: { in: userIds } },
       select: { id: true, email: true, name: true },
     });
 

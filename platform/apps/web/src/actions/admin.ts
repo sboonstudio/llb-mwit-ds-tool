@@ -9,13 +9,32 @@ import bcrypt from "bcryptjs";
 export async function updateUserRole(userId: string, newRole: Role) {
   const session = await auth();
 
-  if (session?.user?.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN" || !session?.user?.id) {
     throw new Error("Unauthorized");
   }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, role: true }
+  });
 
   await prisma.user.update({
     where: { id: userId },
     data: { role: newRole },
+  });
+
+  // Audit Log
+  await prisma.activityLog.create({
+    data: {
+      userId: session.user.id,
+      action: "ADMIN_UPDATE_ROLE",
+      details: JSON.stringify({
+        targetUserId: userId,
+        targetEmail: targetUser?.email,
+        oldRole: targetUser?.role,
+        newRole: newRole
+      })
+    }
   });
 
   revalidatePath("/admin");
@@ -24,7 +43,7 @@ export async function updateUserRole(userId: string, newRole: Role) {
 export async function deleteUser(userId: string) {
   const session = await auth();
 
-  if (session?.user?.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN" || !session?.user?.id) {
     throw new Error("Unauthorized");
   }
 
@@ -32,6 +51,23 @@ export async function deleteUser(userId: string) {
   if (session.user.id === userId) {
     throw new Error("Cannot delete yourself");
   }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true }
+  });
+
+  // Audit Log BEFORE deletion
+  await prisma.activityLog.create({
+    data: {
+      userId: session.user.id,
+      action: "ADMIN_DELETE_USER",
+      details: JSON.stringify({
+        targetUserId: userId,
+        targetEmail: targetUser?.email
+      })
+    }
+  });
 
   await prisma.user.delete({
     where: { id: userId },
@@ -43,7 +79,7 @@ export async function deleteUser(userId: string) {
 export async function adminResetPassword(userId: string, newPassword: string) {
   const session = await auth();
 
-  if (session?.user?.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN" || !session?.user?.id) {
     return { error: "Unauthorized" };
   }
 
@@ -52,6 +88,11 @@ export async function adminResetPassword(userId: string, newPassword: string) {
   }
 
   try {
+    const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true }
+    });
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
@@ -59,8 +100,20 @@ export async function adminResetPassword(userId: string, newPassword: string) {
       data: { password: hashedPassword },
     });
 
+    // Audit Log
+    await prisma.activityLog.create({
+        data: {
+            userId: session.user.id,
+            action: "ADMIN_RESET_PASSWORD",
+            details: JSON.stringify({
+                targetUserId: userId,
+                targetEmail: targetUser?.email
+            })
+        }
+    });
+
     revalidatePath("/admin");
-    return { success: "Password reset successfully" };
+    return { success: true, message: "Password reset successfully" };
   } catch (error) {
     console.error("Admin reset password error:", error);
     return { error: "Failed to reset password" };
