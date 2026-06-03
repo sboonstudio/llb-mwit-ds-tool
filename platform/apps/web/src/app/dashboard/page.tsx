@@ -6,6 +6,7 @@ import ChangePasswordForm from "@/components/ChangePasswordForm";
 import ActivityIntelligence from "@/components/ActivityIntelligence";
 import EditNameForm from "@/components/EditNameForm";
 import { headers } from "next/headers";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,14 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-col gap-3 sm:items-end">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/about"
+                className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+              >
+                About System
+              </Link>
+              <div className="h-4 w-px bg-slate-200"></div>
               <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${
                 dbUser.role === "ADMIN" ? "bg-red-100 text-red-700" :
                 dbUser.role === "COACH" ? "bg-purple-100 text-purple-700" :
