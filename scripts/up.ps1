@@ -79,6 +79,13 @@ foreach ($dir in $dataDirs) {
         Write-Host "Created directory: $dir" -ForegroundColor Gray
     }
 }
+
+# Sync VERSION file to web app context for Docker build
+if (Test-Path "$repoRoot/VERSION") {
+    Copy-Item "$repoRoot/VERSION" "$repoRoot/platform/apps/web/VERSION" -Force
+    Write-Host "Synced VERSION to web app context." -ForegroundColor Gray
+}
+
 # -----------------------------
 
 # Determine Docker Arguments and Local Mode
