@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PasswordIntelligence from "@/components/PasswordIntelligence";
+import BotShield from "@/components/BotShield";
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <BotShield />
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Display Name</label>
             <input

@@ -2,8 +2,15 @@
 
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { validateBotShield } from "@/lib/security";
 
 export async function registerUser(formData: FormData) {
+  // Anti-bot check
+  const shield = validateBotShield(formData);
+  if (shield.isBot) {
+    return { error: shield.reason };
+  }
+
   const email = (formData.get("email") as string || "").trim().toLowerCase();
   const password = formData.get("password") as string;
   const name = (formData.get("name") as string || "").trim();
@@ -34,6 +41,29 @@ export async function registerUser(formData: FormData) {
   }
 
   try {
+    // 2. Rate Limiting Check (Max 3 registration attempts in last 10 minutes per IP/system)
+    // Since we don't have easy access to IP here without headers(), 
+    // we'll at least limit global registration velocity for now or use name/email patterns.
+    const recentRegistrations = await prisma.activityLog.count({
+        where: {
+            action: "REGISTER_ATTEMPT",
+            timestamp: { gte: new Date(Date.now() - 10 * 60 * 1000) }
+        }
+    });
+
+    if (recentRegistrations >= 10) {
+        return { error: "System is busy. Please try again in 10 minutes." };
+    }
+
+    // Log the attempt
+    await prisma.activityLog.create({
+        data: {
+            userId: null,
+            action: "REGISTER_ATTEMPT",
+            details: JSON.stringify({ email })
+        }
+    }).catch(() => {});
+
     // 5. Uniqueness Checks
     const existingEmail = await prisma.user.findUnique({
       where: { email },
