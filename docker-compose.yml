@@ -83,6 +83,7 @@ services:
     image: timberio/vector:latest-alpine
     volumes:
       - ./infrastructure/logging/vector.yaml:/etc/vector/vector.yaml:ro
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/logging:/var/lib/vector
     environment:
       - JUPYTERHUB_SHARED_SECRET=${JUPYTERHUB_SHARED_SECRET}
     ports:

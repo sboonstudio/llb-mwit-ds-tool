@@ -36,6 +36,7 @@ $keysToEnsure = @{
     "JUPYTERHUB_HOST_WORKSPACES" = "$repoRootPath/infrastructure/data/lab-workspaces"
     "JUPYTERHUB_HOST_SHARED_CONTENT" = "$repoRootPath/infrastructure/content/sample-notebooks"
     "JUPYTERHUB_HOST_SINGLEUSER_CONFIG" = "$repoRootPath/infrastructure/lab/jupyterlab/singleuser-config"
+    "LLBRIDGE_HOST_LOGGING" = "$repoRootPath/infrastructure/data/logging"
 }
 $seenKeys = @()
 
@@ -63,6 +64,21 @@ foreach ($key in $keysToEnsure.Keys) {
 
 Set-Content -LiteralPath $targetFile -Value $updatedLines -Encoding UTF8
 Write-Host "Successfully synced environment paths to: $repoRootPath"
+
+# Create necessary data directories if they don't exist
+$dataDirs = @(
+    "$repoRoot/infrastructure/data/nextjs",
+    "$repoRoot/infrastructure/data/jupyterhub",
+    "$repoRoot/infrastructure/data/lab-workspaces",
+    "$repoRoot/infrastructure/data/logging"
+)
+
+foreach ($dir in $dataDirs) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        Write-Host "Created directory: $dir" -ForegroundColor Gray
+    }
+}
 # -----------------------------
 
 # Determine Docker Arguments and Local Mode
