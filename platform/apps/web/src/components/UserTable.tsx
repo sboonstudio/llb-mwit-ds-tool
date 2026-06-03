@@ -24,27 +24,34 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | Role>("ALL");
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showResetPassword, setShowResetPassword] = useState(false);
 
   const handleRoleChange = async (userId: string, newRole: Role) => {
+    setLoadingAction(`role-${userId}`);
     try {
       await updateUserRole(userId, newRole);
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch (error) {
       alert("Failed to update role");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const handleDelete = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
+    setLoadingAction(`delete-${userId}`);
     try {
       await deleteUser(userId);
       setUsers(users.filter(u => u.id !== userId));
     } catch (error) {
       alert("Failed to delete user");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -54,6 +61,7 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
       return;
     }
     
+    setLoadingAction(`reset-${userId}`);
     try {
       const result = await adminResetPassword(userId, newPassword);
       if (result?.success) {
@@ -66,6 +74,8 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
       }
     } catch (error) {
       alert("Failed to reset password");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -190,6 +200,7 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                           onChange={(e) => setNewPassword(e.target.value)}
                           className="w-32 rounded-lg border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:bg-white outline-none"
                           autoFocus
+                          disabled={!!loadingAction}
                         />
                         <button
                           type="button"
@@ -201,9 +212,10 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                       </div>
                       <button
                         onClick={() => handleResetPassword(user.id)}
-                        className="rounded bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 shadow-sm transition-all"
+                        disabled={!!loadingAction}
+                        className="rounded bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50"
                       >
-                        SAVE
+                        {loadingAction === `reset-${user.id}` ? "SAVING..." : "SAVE"}
                       </button>
                       <button
                         onClick={() => {
@@ -211,7 +223,8 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                           setNewPassword("");
                           setShowResetPassword(false);
                         }}
-                        className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-2"
+                        disabled={!!loadingAction}
+                        className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-2 disabled:opacity-50"
                       >
                         CANCEL
                       </button>
@@ -220,16 +233,18 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                     <div className="flex justify-end gap-3">
                       <button
                         onClick={() => setResettingUserId(user.id)}
-                        className="rounded border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100 transition-all"
+                        disabled={!!loadingAction}
+                        className="rounded border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100 transition-all disabled:opacity-50"
                       >
                         RESET PASSWORD
                       </button>
                       {currentUserId !== user.id && (
                         <button
                           onClick={() => handleDelete(user.id)}
-                          className="rounded border border-red-100 bg-red-50 px-3 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-all"
+                          disabled={!!loadingAction}
+                          className="rounded border border-red-100 bg-red-50 px-3 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-all disabled:opacity-50"
                         >
-                          DELETE
+                          {loadingAction === `delete-${user.id}` ? "DELETING..." : "DELETE"}
                         </button>
                       )}
                     </div>
