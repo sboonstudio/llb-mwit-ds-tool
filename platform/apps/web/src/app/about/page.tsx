@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import Link from "next/link";
+import { getProjectVersion } from "@/lib/version";
 
 export default async function AboutPage() {
-  const version = "0.4.0-alpha"; // Should ideally come from a shared config or env
+  const version = getProjectVersion();
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-950">
