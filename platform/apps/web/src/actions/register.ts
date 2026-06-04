@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { validateBotShield } from "@/lib/security";
+import { headers } from "next/headers";
 
 export async function registerUser(formData: FormData) {
   // Anti-bot check
@@ -41,30 +42,7 @@ export async function registerUser(formData: FormData) {
   }
 
   try {
-    // 2. Rate Limiting Check (Max 3 registration attempts in last 10 minutes per IP/system)
-    // Since we don't have easy access to IP here without headers(), 
-    // we'll at least limit global registration velocity for now or use name/email patterns.
-    const recentRegistrations = await prisma.activityLog.count({
-        where: {
-            action: "REGISTER_ATTEMPT",
-            timestamp: { gte: new Date(Date.now() - 10 * 60 * 1000) }
-        }
-    });
-
-    if (recentRegistrations >= 10) {
-        return { error: "System is busy. Please try again in 10 minutes." };
-    }
-
-    // Log the attempt
-    await prisma.activityLog.create({
-        data: {
-            userId: null,
-            action: "REGISTER_ATTEMPT",
-            details: JSON.stringify({ email })
-        }
-    }).catch(() => {});
-
-    // 5. Uniqueness Checks
+    // 5. Uniqueness Checks (Moved up as requested)
     const existingEmail = await prisma.user.findUnique({
       where: { email },
     });
@@ -78,6 +56,32 @@ export async function registerUser(formData: FormData) {
     if (existingName) {
         return { error: "This name is already taken. Please choose a unique display name." };
     }
+
+    // 6. Rate Limiting Check (Per-IP, Max 200 registration attempts in last 10 minutes)
+    const headerList = await headers();
+    const ip = headerList.get("x-forwarded-for")?.split(',')[0] || "unknown";
+
+    const recentRegistrations = await prisma.activityLog.count({
+        where: {
+            action: "REGISTER_ATTEMPT",
+            ipAddress: ip,
+            timestamp: { gte: new Date(Date.now() - 10 * 60 * 1000) }
+        }
+    });
+
+    if (recentRegistrations >= 200) {
+        return { error: "System is busy. Please try again in 10 minutes." };
+    }
+
+    // Log the attempt
+    await prisma.activityLog.create({
+        data: {
+            userId: null,
+            action: "REGISTER_ATTEMPT",
+            ipAddress: ip,
+            details: JSON.stringify({ email })
+        }
+    }).catch(() => {});
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
