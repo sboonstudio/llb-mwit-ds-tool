@@ -31,7 +31,7 @@
 เพื่อป้องกันความสับสนเมื่อมีการสลับ Agent AI หรือสลับบริบทการทำงาน โครงการนี้ใช้ **Git Worktree** ในการแยกสภาพแวดล้อม:
 
 *   **Primary Path**: `/learnlab-bridge` (Branch: `main`)
-*   **Export Path**: `/learnlab-bridge-public` (Branch: `public/export-mwit-ds`)
+*   **Export Path**: `/learnlab-bridge-export` (Branch: `public/export-mwit-ds`)
 
 ### **กฎสำหรับ Agent AI:**
 1.  **Context Check**: ก่อนเริ่มงาน Agent ต้องรัน `git worktree list` และ `git remote -v` เสมอ
@@ -52,7 +52,7 @@
 เมื่อต้องการ Release เวอร์ชันใหม่:
 1.  อัปเดตไฟล์ `VERSION` ใน `main`
 2.  Commit และ Tag `vX.X.X-alpha` ในโฟลเดอร์ `/learnlab-bridge`
-3.  ไปที่โฟลเดอร์ `/learnlab-bridge-public` แล้วทำการซิงโครไนซ์โค้ด
+3.  ไปที่โฟลเดอร์ `/learnlab-bridge-export` แล้วทำการซิงโครไนซ์โค้ด
 4.  อัปเดตไฟล์ `VERSION` ใน Public Branch ให้ตรงกัน
 5.  Push ทั้ง 2 Remotes พร้อม Tags
 
