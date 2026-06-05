@@ -4,8 +4,10 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isCoach = session?.user?.role === "COACH";
 
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdmin && !isCoach) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

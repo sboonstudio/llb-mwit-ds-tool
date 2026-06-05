@@ -21,6 +21,12 @@ export default async function AuditLogPage() {
           </div>
           <div className="flex gap-3">
             <a
+              href="/admin/settings"
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            >
+              ⚙️ Settings
+            </a>
+            <a
               href="/admin"
               className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >

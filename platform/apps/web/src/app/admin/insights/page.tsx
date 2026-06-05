@@ -6,8 +6,10 @@ export const dynamic = "force-dynamic";
 
 export default async function InsightsPage() {
   const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isCoach = session?.user?.role === "COACH";
 
-  if (session?.user?.role !== "ADMIN" || !session?.user?.id) {
+  if (!isAdmin && !isCoach) {
     redirect("/dashboard");
   }
 
@@ -20,12 +22,14 @@ export default async function InsightsPage() {
             <h1 className="text-3xl font-semibold">Learning Insights</h1>
           </div>
           <div className="flex gap-3">
-            <a
-                href="/admin"
-                className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-                User Management
-            </a>
+            {isAdmin && (
+                <a
+                    href="/admin"
+                    className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                >
+                    Admin Panel
+                </a>
+            )}
             <a
                 href="/dashboard"
                 className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
