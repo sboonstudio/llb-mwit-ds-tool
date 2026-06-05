@@ -10,17 +10,32 @@ export async function getSystemConfig() {
     throw new Error("Unauthorized");
   }
 
-  let config = await prisma.systemConfig.findUnique({
-    where: { id: "CURRENT" }
-  });
-
-  if (!config) {
-    config = await prisma.systemConfig.create({
-      data: { id: "CURRENT" }
+  try {
+    let config = await prisma.systemConfig.findUnique({
+      where: { id: "CURRENT" }
     });
-  }
 
-  return config;
+    if (!config) {
+      config = await prisma.systemConfig.create({
+        data: { id: "CURRENT" }
+      });
+    }
+
+    return config;
+  } catch (error) {
+    console.error("Failed to get system config:", error);
+    // Return a default config object instead of crashing if table is missing or DB is locked
+    return {
+      id: "CURRENT",
+      retentionDays: 30,
+      autoRotate: true,
+      errorThreshold: 10,
+      alertWindowMins: 60,
+      notifyEmail: null,
+      enableAlerts: false,
+      updatedAt: new Date()
+    };
+  }
 }
 
 export async function updateSystemConfig(data: {
