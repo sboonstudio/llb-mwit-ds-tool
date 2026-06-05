@@ -13,6 +13,19 @@ export async function updateUserRole(userId: string, newRole: Role) {
     throw new Error("Unauthorized");
   }
 
+  // Safeguard: Check if this is the last admin being demoted
+  if (newRole !== "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      const targetUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true }
+      });
+      
+      if (adminCount <= 1 && targetUser?.role === "ADMIN") {
+          throw new Error("Operation failed: You cannot demote the last administrator. The system must have at least one ADMIN.");
+      }
+  }
+
   const targetUser = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, role: true }
@@ -54,8 +67,16 @@ export async function deleteUser(userId: string) {
 
   const targetUser = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true }
+    select: { email: true, role: true }
   });
+
+  // Safeguard: Check if this is the last admin being deleted
+  if (targetUser?.role === "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+          throw new Error("Operation failed: You cannot delete the last administrator. The system must have at least one ADMIN.");
+      }
+  }
 
   // Audit Log BEFORE deletion
   await prisma.activityLog.create({

@@ -87,45 +87,50 @@ async function main() {
     const adminCheck = betterSqlite.prepare('SELECT count(*) as count FROM User WHERE role = ?').get('ADMIN');
     const adminCount = adminCheck ? adminCheck.count : 0;
 
-    // Check if the target user already exists
-    const existingUser = betterSqlite.prepare('SELECT id, role FROM User WHERE email = ?').get(email);
-
-    if (existingUser) {
-      if (existingUser.role === 'ADMIN') {
-        console.log(`>>> User ${email} is already an administrator. Skipping.`);
-      } else {
-        // User exists but is not an admin - Promotion logic
-        let confirmPromotion = isSilent; // Auto-confirm if silent mode
-        
-        if (!isSilent) {
-          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-          const answer = await new Promise((resolve) => rl.question(`User ${email} exists with role '${existingUser.role}'. Promote to ADMIN? (y/N): `, resolve));
-          confirmPromotion = answer.toLowerCase() === 'y';
-          rl.close();
-        }
-
-        if (confirmPromotion) {
-          console.log(`>>> Promoting ${email} to ADMIN...`);
-          betterSqlite.prepare('UPDATE User SET role = ?, updatedAt = ? WHERE email = ?')
-            .run('ADMIN', new Date().toISOString(), email);
-          console.log(`User ${email} promoted successfully.`);
-        } else {
-          console.log('>>> Promotion cancelled.');
-        }
-      }
+    // RULE: If there is at least one ADMIN in the system, we DO NOT need to auto-provision or touch admin@sboon.org
+    if (adminCount > 0 && isSilent) {
+        console.log(`>>> ${adminCount} administrator(s) already exist. Skipping auto-provisioning for safety.`);
     } else {
-      // User does not exist - Creation logic
-      if (adminCount === 0 || !isSilent) {
-        console.log(`>>> User ${email} not found. Creating new ADMIN account...`);
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const now = new Date().toISOString();
-        const id = `cli-${Math.random().toString(36).substr(2, 9)}`;
-        
-        betterSqlite.prepare('INSERT INTO User (id, email, name, password, role, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(id, email, 'System Admin', hashedPassword, 'ADMIN', now, now);
-        
-        console.log(`Admin user created: ${email}`);
-      }
+        // Check if the target user already exists
+        const existingUser = betterSqlite.prepare('SELECT id, role FROM User WHERE email = ?').get(email);
+
+        if (existingUser) {
+            if (existingUser.role === 'ADMIN') {
+                console.log(`>>> User ${email} is already an administrator. Skipping.`);
+            } else {
+                // User exists but is not an admin - Promotion logic
+                let confirmPromotion = isSilent && adminCount === 0; // Auto-confirm ONLY if NO admins exist and in silent mode
+                
+                if (!isSilent) {
+                    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                    const answer = await new Promise((resolve) => rl.question(`User ${email} exists with role '${existingUser.role}'. Promote to ADMIN? (y/N): `, resolve));
+                    confirmPromotion = answer.toLowerCase() === 'y';
+                    rl.close();
+                }
+
+                if (confirmPromotion) {
+                    console.log(`>>> Promoting ${email} to ADMIN...`);
+                    betterSqlite.prepare('UPDATE User SET role = ?, updatedAt = ? WHERE email = ?')
+                        .run('ADMIN', new Date().toISOString(), email);
+                    console.log(`User ${email} promoted successfully.`);
+                } else {
+                    console.log('>>> Promotion skipped/cancelled (Current Admins: ' + adminCount + ').');
+                }
+            }
+        } else {
+            // User does not exist - Creation logic
+            if (adminCount === 0 || !isSilent) {
+                console.log(`>>> User ${email} not found. Creating new ADMIN account...`);
+                const hashedPassword = await bcrypt.hash(password, 10);
+                const now = new Date().toISOString();
+                const id = `cli-${Math.random().toString(36).substr(2, 9)}`;
+                
+                betterSqlite.prepare('INSERT INTO User (id, email, name, password, role, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                    .run(id, email, 'System Admin', hashedPassword, 'ADMIN', now, now);
+                
+                console.log(`Admin user created: ${email}`);
+            }
+        }
     }
 
     // 2. Display Top 5 Admins
