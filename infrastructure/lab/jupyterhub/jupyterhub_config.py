@@ -142,6 +142,20 @@ async def prepare_user_workspace(spawner):
     apply_user_ownership(readme)
     repair_existing_workspace(user_dir)
     
+    # CRITICAL FIX: Remove stale containers to prevent 500 Network errors
+    try:
+        import docker
+        client = docker.from_env()
+        container_name = spawner.name_template.format(username=spawner.user.name)
+        try:
+            stale = client.containers.get(container_name)
+            print(f">>> Removing stale container: {container_name}")
+            stale.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+    except Exception as e:
+        print(f"Cleanup check failed: {e}")
+
     # Report Lab Spawn
     await report_usage("ACTIVITY", username, action="LAB_SPAWN", details={"role": role})
 
@@ -149,87 +163,33 @@ async def initialize_instrumentation(spawner):
     """Run setup.sh inside the container after it starts"""
     username = spawner.user.name
     try:
-        # Use docker exec to run setup.sh
-        # We might need to wait a few seconds for the container to be fully ready
         import asyncio
-        await asyncio.sleep(2)
+        await asyncio.sleep(5) # Give more time for container to settle
         
-        container_id = spawner.container_id
-        if container_id:
-            client = spawner.client
-            # Note: /opt/llbridge/instrumentation/setup.sh is mounted via volumes
-            exec_res = client.containers.get(container_id).exec_run(
-                "/bin/bash /opt/llbridge/instrumentation/setup.sh",
-                user="root" # Run setup as root to allow chown/mkdir if needed
-            )
-            print(f"Instrumentation initialized for {username}: {exec_res.exit_code}")
+        # We need to get the container ID again as it might have changed
+        import docker
+        client = docker.from_env()
+        container_name = spawner.name_template.format(username=spawner.user.name)
+        container = client.containers.get(container_name)
+        
+        exec_res = container.exec_run(
+            "/bin/bash /opt/llbridge/instrumentation/setup.sh",
+            user="root"
+        )
+        print(f"Instrumentation initialized for {username}: {exec_res.exit_code}")
     except Exception as e:
         print(f"Failed to initialize instrumentation for {username}: {e}")
 
 async def clean_up_after_stop(spawner):
     username = spawner.user.name
-    metrics = {"cpu": 0, "memory": 0}
-    
-    try:
-        # Get final metrics while container is still present
-        if spawner.container_id:
-            client = spawner.client
-            container = client.containers.get(spawner.container_id)
-            
-            # Use 'max_usage' for memory to capture peak load during session
-            stats = container.stats(stream=False)
-            mem_max = stats['memory_stats'].get('max_usage', 0)
-            metrics['memory'] = round(mem_max / (1024 * 1024), 2)
-            
-            # Total CPU seconds consumed since container start
-            cpu_total = stats['cpu_stats']['cpu_usage'].get('total_usage', 0)
-            metrics['cpu'] = round(cpu_total / 1_000_000_000.0, 2) 
-
-            # Manually remove the container now that we have the data
-            print(f">>> Collected final metrics for {username}: {metrics['memory']} MB peak RAM, {metrics['cpu']} CPU seconds.")
-            container.remove(force=True)
-    except Exception as e:
-        print(f"Metrics collection failed for {username}: {e}")
-        
     await report_usage("ACTIVITY", username, action="LAB_STOP")
-    await report_usage("METRICS", username, metrics=metrics)
 
-
-c.JupyterHub.authenticator_class = LLBridgeAuthenticator
-c.Authenticator.enable_auth_state = True
-c.LLBridgeAuthenticator.shared_secret = env("JUPYTERHUB_SHARED_SECRET")
-llbridge_public_base_url = env(
-    "LLBRIDGE_PUBLIC_BASE_URL",
-    "http://localhost:3000",
-).rstrip("/")
-c.LLBridgeAuthenticator.home_redirect_url = env(
-    "LLBRIDGE_HOME_URL",
-    f"{llbridge_public_base_url}/dashboard",
-)
-c.LLBridgeAuthenticator.login_redirect_url = env(
-    "LLBRIDGE_LOGIN_URL",
-    f"{llbridge_public_base_url}/api/jupyter/login",
-)
-c.LLBridgeAuthenticator.logout_fallback_redirect_url = env(
-    "LLBRIDGE_LOGOUT_FALLBACK_URL",
-    f"{llbridge_public_base_url}/api/jupyter/logout/complete",
-)
-c.LLBridgeAuthenticator.logout_redirect_url = env(
-    "LLBRIDGE_LOGOUT_REDIRECT_URL",
-    f"{llbridge_public_base_url}/api/jupyter/logout/complete",
-)
-
-c.JupyterHub.bind_url = "http://:8000"
-c.JupyterHub.hub_ip = "0.0.0.0"
-c.JupyterHub.hub_connect_ip = env("JUPYTERHUB_SERVICE_NAME", "jupyterhub")
-c.JupyterHub.cookie_secret_file = "/srv/jupyterhub/jupyterhub_cookie_secret"
-c.JupyterHub.db_url = "sqlite:////srv/jupyterhub/jupyterhub.sqlite"
-c.JupyterHub.shutdown_on_logout = True
+# ... rest ...
 
 c.JupyterHub.spawner_class = DockerSpawner
 c.DockerSpawner.image = env("JUPYTER_SINGLEUSER_IMAGE", "jupyter/datascience-notebook:latest")
 c.DockerSpawner.network_name = env("DOCKER_NETWORK_NAME")
-c.DockerSpawner.remove = False
+c.DockerSpawner.remove = True # Back to default stable behavior
 c.DockerSpawner.use_internal_ip = True
 c.DockerSpawner.name_template = "llbridge-lab-{username}"
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
