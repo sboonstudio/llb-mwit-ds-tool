@@ -1,16 +1,44 @@
 # Vector Configuration for LearnLab Bridge Insight Engine
 
 sources:
-  syslog_server:
-    type: syslog
+  udp_in:
+    type: socket
     address: 0.0.0.0:514
     mode: udp
+    decoding:
+      codec: bytes
+
+transforms:
+  parse_syslog:
+    type: remap
+    inputs:
+      - udp_in
+    source: |
+      # Attempt to parse the message
+      raw_msg = string!(.message)
+
+      # Try to find JSON content
+      json_start = find(raw_msg, "{")
+      if !is_null(json_start) {
+          json_part = slice!(raw_msg, start: json_start)
+          parsed, err = parse_json(json_part)
+          if err == null {
+              . = merge!(., parsed)
+          }
+      }
+
+      
+      # Ensure timestamp and metadata exist
+      .processed_at = now()
+      if .timestamp == null {
+          .timestamp = .processed_at
+      }
 
 sinks:
   web_api_sink:
     type: http
     inputs:
-      - syslog_server
+      - parse_syslog
     uri: "http://llbridge-web:3000/api/jupyter/report"
     method: post
     encoding:
@@ -18,5 +46,10 @@ sinks:
     auth:
       strategy: bearer
       token: "${JUPYTERHUB_SHARED_SECRET}"
-    # Optional: Transform to match our API expectation if needed
-    # For now, we'll handle the raw syslog format in the API or use a transform here.
+
+  stdout_debug:
+    type: console
+    inputs:
+      - parse_syslog
+    encoding:
+      codec: json
