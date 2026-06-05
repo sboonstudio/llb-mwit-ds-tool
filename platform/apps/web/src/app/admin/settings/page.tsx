@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import AuditLogViewer from "@/components/AuditLogViewer";
+import SystemSettings from "@/components/SystemSettings";
 
 export const dynamic = "force-dynamic";
 
-export default async function AuditLogPage() {
+export default async function AdminSettingsPage() {
   const session = await auth();
 
   if (session?.user?.role !== "ADMIN" || !session?.user?.id) {
@@ -17,15 +17,9 @@ export default async function AuditLogPage() {
         <div className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
           <div>
             <p className="text-sm font-medium text-slate-500">LearnLab Bridge Control</p>
-            <h1 className="text-3xl font-semibold">System Audit Logs</h1>
+            <h1 className="text-3xl font-semibold">System Settings</h1>
           </div>
           <div className="flex gap-3">
-            <a
-              href="/admin/settings"
-              className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-              ⚙️ Settings
-            </a>
             <a
               href="/admin"
               className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -33,10 +27,10 @@ export default async function AuditLogPage() {
               User Management
             </a>
             <a
-              href="/admin/insights"
+              href="/admin/logs"
               className="inline-flex h-10 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >
-              Learning Insights
+              Audit Logs
             </a>
             <a
               href="/dashboard"
@@ -48,7 +42,7 @@ export default async function AuditLogPage() {
         </div>
 
         <section>
-          <AuditLogViewer />
+          <SystemSettings />
         </section>
       </main>
     </div>

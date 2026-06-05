@@ -141,7 +141,16 @@ export default async function DashboardPage() {
                   Admin Panel
                 </a>
               )}
+              {dbUser.role === "COACH" && (
+                <a
+                  href="/admin/insights"
+                  className="inline-flex h-10 items-center rounded-md border border-purple-300 bg-purple-50 px-4 text-sm font-medium text-purple-700 hover:bg-purple-100"
+                >
+                  Learning Insights
+                </a>
+              )}
               <form action={signOutUser}>
+
                 <button
                   type="submit"
                   className="h-10 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
