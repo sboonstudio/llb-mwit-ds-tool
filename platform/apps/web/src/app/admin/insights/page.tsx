@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminInsights from "@/components/AdminInsights";
+import TelemetryDebugStream from "@/components/TelemetryDebugStream";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,16 @@ export default async function InsightsPage() {
 
             <AdminInsights />
         </section>
+
+        {isAdmin && (
+            <section className="mt-12">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-slate-800">Live Telemetry Debug</h2>
+                    <span className="rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600">REAL-TIME MONITOR</span>
+                </div>
+                <TelemetryDebugStream />
+            </section>
+        )}
       </main>
     </div>
   );
