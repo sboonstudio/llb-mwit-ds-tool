@@ -83,7 +83,7 @@ async def report_usage(type, username, action=None, details=None, metrics=None):
     # Use internal service name for communication within Docker
     web_url = "http://llbridge-web:3000"
     api_url = f"{web_url}/api/jupyter/report"
-    
+
     payload = {
         "type": type,
         "username": username,
@@ -91,10 +91,10 @@ async def report_usage(type, username, action=None, details=None, metrics=None):
         "details": details,
         "metrics": metrics
     }
-    
+
     from tornado.httpclient import AsyncHTTPClient, HTTPRequest
     import json
-    
+
     client = AsyncHTTPClient()
     try:
         req = HTTPRequest(
@@ -141,7 +141,7 @@ async def prepare_user_workspace(spawner):
         )
     apply_user_ownership(readme)
     repair_existing_workspace(user_dir)
-    
+
     # CRITICAL FIX: Remove stale containers to prevent 500 Network errors
     try:
         import docker
@@ -165,13 +165,13 @@ async def initialize_instrumentation(spawner):
     try:
         import asyncio
         await asyncio.sleep(5) # Give more time for container to settle
-        
+
         # We need to get the container ID again as it might have changed
         import docker
         client = docker.from_env()
         container_name = spawner.name_template.format(username=spawner.user.name)
         container = client.containers.get(container_name)
-        
+
         exec_res = container.exec_run(
             "/bin/bash /opt/llbridge/instrumentation/setup.sh",
             user="root"
@@ -184,12 +184,43 @@ async def clean_up_after_stop(spawner):
     username = spawner.user.name
     await report_usage("ACTIVITY", username, action="LAB_STOP")
 
-# ... rest ...
+# --- Core Configuration ---
+
+c.JupyterHub.authenticator_class = LLBridgeAuthenticator
+c.Authenticator.enable_auth_state = True
+c.LLBridgeAuthenticator.shared_secret = env("JUPYTERHUB_SHARED_SECRET")
+llbridge_public_base_url = env(
+    "LLBRIDGE_PUBLIC_BASE_URL",
+    "http://localhost:3000",
+).rstrip("/")
+c.LLBridgeAuthenticator.home_redirect_url = env(
+    "LLBRIDGE_HOME_URL",
+    f"{llbridge_public_base_url}/dashboard",
+)
+c.LLBridgeAuthenticator.login_redirect_url = env(
+    "LLBRIDGE_LOGIN_URL",
+    f"{llbridge_public_base_url}/api/jupyter/login",
+)
+c.LLBridgeAuthenticator.logout_fallback_redirect_url = env(
+    "LLBRIDGE_LOGOUT_FALLBACK_URL",
+    f"{llbridge_public_base_url}/api/jupyter/logout/complete",
+)
+c.LLBridgeAuthenticator.logout_redirect_url = env(
+    "LLBRIDGE_LOGOUT_REDIRECT_URL",
+    f"{llbridge_public_base_url}/api/jupyter/logout/complete",
+)
+
+c.JupyterHub.bind_url = "http://:8000"
+c.JupyterHub.hub_ip = "0.0.0.0"
+c.JupyterHub.hub_connect_ip = env("JUPYTERHUB_SERVICE_NAME", "llbridge-hub")
+c.JupyterHub.cookie_secret_file = "/srv/jupyterhub/jupyterhub_cookie_secret"
+c.JupyterHub.db_url = "sqlite:////srv/jupyterhub/jupyterhub.sqlite"
+c.JupyterHub.shutdown_on_logout = True
 
 c.JupyterHub.spawner_class = DockerSpawner
 c.DockerSpawner.image = env("JUPYTER_SINGLEUSER_IMAGE", "jupyter/datascience-notebook:latest")
 c.DockerSpawner.network_name = env("DOCKER_NETWORK_NAME")
-c.DockerSpawner.remove = True # Back to default stable behavior
+c.DockerSpawner.remove = True 
 c.DockerSpawner.use_internal_ip = True
 c.DockerSpawner.name_template = "llbridge-lab-{username}"
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
