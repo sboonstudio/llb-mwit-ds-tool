@@ -40,6 +40,20 @@ model ActivityLog {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model SystemConfig {
+  id    String @id @default("CURRENT")
+  // Log Rotation
+  retentionDays   Int     @default(30)
+  autoRotate      Boolean @default(true)
+  // Alerts
+  errorThreshold  Int     @default(10) // Number of errors in a window
+  alertWindowMins Int     @default(60) // Window size in minutes
+  notifyEmail     String?
+  enableAlerts    Boolean @default(false)
+  
+  updatedAt       DateTime @updatedAt
+}
+
 model ResourceUsage {
   id          String   @id @default(cuid())
   userId      String
