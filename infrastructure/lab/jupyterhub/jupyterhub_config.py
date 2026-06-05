@@ -171,28 +171,25 @@ async def clean_up_after_stop(spawner):
     metrics = {"cpu": 0, "memory": 0}
     
     try:
-        # Try to get stats from the container before it's fully gone
-        # Note: spawner.container_id should still be available
+        # Get final metrics while container is still present
         if spawner.container_id:
-            # DockerSpawner uses docker-py (synchronous)
-            # We run it in a thread if needed, but for a single shot it's usually okay
             client = spawner.client
             container = client.containers.get(spawner.container_id)
+            
+            # Use 'max_usage' for memory to capture peak load during session
             stats = container.stats(stream=False)
+            mem_max = stats['memory_stats'].get('max_usage', 0)
+            metrics['memory'] = round(mem_max / (1024 * 1024), 2)
             
-            # Memory Usage in MB
-            mem_usage = stats['memory_stats'].get('usage', 0)
-            metrics['memory'] = round(mem_usage / (1024 * 1024), 2)
-            
-            # CPU Usage (Simplified delta calculation)
-            cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
-            system_delta = stats['cpu_stats'].get('system_cpu_usage', 0) - stats['precpu_stats'].get('system_cpu_usage', 0)
-            
-            if system_delta > 0 and cpu_delta > 0:
-                metrics['cpu'] = round((cpu_delta / system_delta) * len(stats['cpu_stats']['cpu_usage'].get('percpu_usage', [1])) * 100.0, 2)
+            # Total CPU seconds consumed since container start
+            cpu_total = stats['cpu_stats']['cpu_usage'].get('total_usage', 0)
+            metrics['cpu'] = round(cpu_total / 1_000_000_000.0, 2) 
+
+            # Manually remove the container now that we have the data
+            print(f">>> Collected final metrics for {username}: {metrics['memory']} MB peak RAM, {metrics['cpu']} CPU seconds.")
+            container.remove(force=True)
     except Exception as e:
-        # It's common for this to fail if the container is already removed
-        pass
+        print(f"Metrics collection failed for {username}: {e}")
         
     await report_usage("ACTIVITY", username, action="LAB_STOP")
     await report_usage("METRICS", username, metrics=metrics)
@@ -232,7 +229,7 @@ c.JupyterHub.shutdown_on_logout = True
 c.JupyterHub.spawner_class = DockerSpawner
 c.DockerSpawner.image = env("JUPYTER_SINGLEUSER_IMAGE", "jupyter/datascience-notebook:latest")
 c.DockerSpawner.network_name = env("DOCKER_NETWORK_NAME")
-c.DockerSpawner.remove = True
+c.DockerSpawner.remove = False
 c.DockerSpawner.use_internal_ip = True
 c.DockerSpawner.name_template = "llbridge-lab-{username}"
 c.DockerSpawner.notebook_dir = "/home/jovyan/work"
