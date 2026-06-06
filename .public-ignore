@@ -28,6 +28,7 @@ build/
 
 # Internal Governance and Management
 GIT_GOVERNANCE.md
+docs/internal/
 analysis-process-project/
 learnlab-bridge-export/
 scripts/sync-to-public.ps1
