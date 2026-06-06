@@ -12,9 +12,11 @@ if (-not (Test-Path $versionFile)) {
 $version = (Get-Content $versionFile).Trim()
 Write-Host "Synchronizing version: $version" -ForegroundColor Cyan
 
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
 # 1. Sync to platform/apps/web/VERSION
 $webVersionFile = Join-Path $repoRoot "platform/apps/web/VERSION"
-$version | Set-Content $webVersionFile -Encoding UTF8
+[System.IO.File]::WriteAllText($webVersionFile, $version, $Utf8NoBom)
 Write-Host "Updated $webVersionFile"
 
 # 2. Sync to platform/apps/web/package.json
@@ -23,7 +25,8 @@ if (Test-Path $packageJsonFile) {
     $content = Get-Content $packageJsonFile -Raw | ConvertFrom-Json
     if ($content.version -ne $version) {
         $content.version = $version
-        $content | ConvertTo-Json -Depth 10 | Set-Content $packageJsonFile -Encoding UTF8
+        $json = $content | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText($packageJsonFile, $json, $Utf8NoBom)
         Write-Host "Updated $packageJsonFile"
     }
 }
@@ -34,7 +37,7 @@ if (Test-Path $versionTsFile) {
     $tsContent = Get-Content $versionTsFile -Raw
     $newTsContent = $tsContent -replace 'return ".*"; // Final fallback', "return `"$version`"; // Final fallback"
     if ($tsContent -ne $newTsContent) {
-        $newTsContent | Set-Content $versionTsFile -Encoding UTF8
+        [System.IO.File]::WriteAllText($versionTsFile, $newTsContent, $Utf8NoBom)
         Write-Host "Updated $versionTsFile"
     }
 }

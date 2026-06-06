@@ -1,4 +1,4 @@
-﻿# 🚀 MWIT DS Tool (LearnLab Bridge Public) - v0.4.5
+# 🚀 MWIT DS Tool (LearnLab Bridge Public) - v0.4.5
 
 ยินดีต้อนรับสู่โปรเจกต์ **MWIT DS Tool** ซึ่งเป็นเครื่องมือบริหารจัดการสภาพแวดล้อมการเรียนรู้ JupyterLab สำหรับโรงเรียนมหิดลวิทยานุสรณ์
 
