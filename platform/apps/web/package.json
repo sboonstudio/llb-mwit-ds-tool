@@ -1,6 +1,6 @@
 {
   "name": "llbridge-web",
-  "version": "0.2.0-alpha",
+  "version": "0.4.5-alpha",
   "private": true,
   "scripts": {
     "predev": "prisma generate",
