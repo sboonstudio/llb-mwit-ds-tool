@@ -127,8 +127,8 @@ if ($isLocal) {
 
 Write-Host "`n>>> Phase 2: Starting Docker containers (Args: $dockerArgs)..." -ForegroundColor Yellow
 if ($isLocal) {
-    # Exclude tunnel service in local mode
-    docker compose --env-file .env -f docker-compose.yml up $dockerArgs llbridge-web llbridge-hub llbridge-proxy
+    # Exclude tunnel service in local mode, but include log collector
+    docker compose --env-file .env -f docker-compose.yml up $dockerArgs llbridge-web llbridge-hub llbridge-proxy llbridge-log-collector
 } else {
     docker compose --env-file .env -f docker-compose.yml up $dockerArgs
 }

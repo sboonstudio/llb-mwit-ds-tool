@@ -130,6 +130,51 @@ async def prepare_user_workspace(spawner):
     user_dir = users_dir / username
     user_dir.mkdir(parents=True, exist_ok=True)
 
+    # --- TELEMETRY INJECTION (Host-side) ---
+    try:
+        # Create IPython startup dir
+        startup_dir = user_dir / ".ipython" / "profile_default" / "startup"
+        startup_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Deploy Logger
+        logger_src = Path("/opt/llbridge/instrumentation/ipython_logger.py")
+        if logger_src.exists():
+            logger_content = logger_src.read_text()
+            (startup_dir / "00-llbridge-insight.py").write_text(logger_content)
+        
+        # Deploy Shell Hook into .bashrc
+        bashrc = user_dir / ".bashrc"
+        hook_cmd = "source /opt/llbridge/instrumentation/shell_logger.sh"
+        if bashrc.exists():
+            content = bashrc.read_text()
+            if hook_cmd not in content:
+                with bashrc.open("a") as f:
+                    f.write(f"\n{hook_cmd}\n")
+        else:
+            bashrc.write_text(f"{hook_cmd}\n")
+
+        # Deploy Jupyter Server Config (for File Tracker)
+        jupyter_config_dir = user_dir / ".jupyter"
+        jupyter_config_dir.mkdir(parents=True, exist_ok=True)
+        server_config = jupyter_config_dir / "jupyter_server_config.py"
+        server_config_content = "c.ServerApp.jpserver_extensions = { 'file_tracker': True }\n"
+        server_config.write_text(server_config_content)
+
+        # Fix permissions for the injected files
+        for root, dirs, files in os.walk(user_dir / ".ipython"):
+            apply_user_ownership(Path(root), directory=True)
+            for f in files:
+                apply_user_ownership(Path(root) / f)
+        
+        for root, dirs, files in os.walk(user_dir / ".jupyter"):
+            apply_user_ownership(Path(root), directory=True)
+            for f in files:
+                apply_user_ownership(Path(root) / f)
+                
+        apply_user_ownership(bashrc)
+    except Exception as e:
+        print(f"Telemetry injection failed for {username}: {e}")
+
     apply_user_ownership(user_dir, directory=True)
     user_dir.chmod(0o770)
 
@@ -141,7 +186,7 @@ async def prepare_user_workspace(spawner):
         )
     apply_user_ownership(readme)
     repair_existing_workspace(user_dir)
-
+    
     # CRITICAL FIX: Remove stale containers to prevent 500 Network errors
     try:
         import docker
@@ -151,34 +196,13 @@ async def prepare_user_workspace(spawner):
             stale = client.containers.get(container_name)
             print(f">>> Removing stale container: {container_name}")
             stale.remove(force=True)
-        except docker.errors.NotFound:
+        except:
             pass
     except Exception as e:
         print(f"Cleanup check failed: {e}")
 
     # Report Lab Spawn
     await report_usage("ACTIVITY", username, action="LAB_SPAWN", details={"role": role})
-
-async def initialize_instrumentation(spawner):
-    """Run setup.sh inside the container after it starts"""
-    username = spawner.user.name
-    try:
-        import asyncio
-        await asyncio.sleep(5) # Give more time for container to settle
-
-        # We need to get the container ID again as it might have changed
-        import docker
-        client = docker.from_env()
-        container_name = spawner.name_template.format(username=spawner.user.name)
-        container = client.containers.get(container_name)
-
-        exec_res = container.exec_run(
-            "/bin/bash /opt/llbridge/instrumentation/setup.sh",
-            user="root"
-        )
-        print(f"Instrumentation initialized for {username}: {exec_res.exit_code}")
-    except Exception as e:
-        print(f"Failed to initialize instrumentation for {username}: {e}")
 
 async def clean_up_after_stop(spawner):
     username = spawner.user.name
@@ -230,6 +254,10 @@ c.DockerSpawner.volumes = {
         "bind": "/home/jovyan/work",
         "mode": "rw",
     },
+    f"{host_workspaces}/users/{{raw_username}}/.ipython": {
+        "bind": "/home/jovyan/.ipython",
+        "mode": "rw",
+    },
     env("JUPYTERHUB_HOST_SHARED_CONTENT", f"{host_workspaces}/shared"): {
         "bind": "/home/jovyan/shared",
         "mode": "ro",
@@ -246,11 +274,11 @@ c.DockerSpawner.volumes = {
 
 c.DockerSpawner.environment = {
     "LLBRIDGE_LOG_HOST": "llbridge-log-collector",
-    "LLBRIDGE_LOG_PORT": "514"
+    "LLBRIDGE_LOG_PORT": "514",
+    "PYTHONPATH": "/home/jovyan/work:/opt/llbridge/instrumentation"
 }
 
 c.Spawner.pre_spawn_hook = prepare_user_workspace
-c.Spawner.post_spawn_hook = initialize_instrumentation
 c.Spawner.post_stop_hook = clean_up_after_stop
 c.Spawner.default_url = "/lab"
 c.Spawner.start_timeout = env_int("JUPYTERHUB_START_TIMEOUT", 900)

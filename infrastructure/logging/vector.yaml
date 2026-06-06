@@ -1,5 +1,9 @@
 # Vector Configuration for LearnLab Bridge Insight Engine
 
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
 sources:
   udp_in:
     type: socket
@@ -7,6 +11,10 @@ sources:
     mode: udp
     decoding:
       codec: bytes
+  
+  # Internal logs for debugging
+  vector_logs:
+    type: internal_logs
 
 transforms:
   parse_syslog:
@@ -27,7 +35,6 @@ transforms:
           }
       }
 
-      
       # Ensure timestamp and metadata exist
       .processed_at = now()
       if .timestamp == null {
@@ -43,6 +50,8 @@ sinks:
     method: post
     encoding:
       codec: json
+    batch:
+      max_events: 1 # Send immediately for debugging
     auth:
       strategy: bearer
       token: "${JUPYTERHUB_SHARED_SECRET}"
@@ -51,5 +60,6 @@ sinks:
     type: console
     inputs:
       - parse_syslog
+      - vector_logs
     encoding:
       codec: json

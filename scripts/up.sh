@@ -58,10 +58,10 @@ if [ "$IS_LOCAL" = true ]; then
     echo "NEXTAUTH_URL=http://localhost:3000" >> .env
 fi
 
-echo -e "\n\033[0;33m>>> Phase 2: Starting Docker containers (Args: ${DOCKER_ARGS[*]})...\033[0m"
+echo -ne "\n\033[0;33m>>> Phase 2: Starting Docker containers (Args: ${DOCKER_ARGS[*]})...\033[0m"
 if [ "$IS_LOCAL" = true ]; then
-    # Exclude tunnel service in local mode
-    docker compose --env-file .env -f docker-compose.yml up "${DOCKER_ARGS[@]}" llbridge-web llbridge-hub llbridge-proxy
+    # Exclude tunnel service in local mode, but include log collector
+    docker compose --env-file .env -f docker-compose.yml up "${DOCKER_ARGS[@]}" llbridge-web llbridge-hub llbridge-proxy llbridge-log-collector
 else
     docker compose --env-file .env -f docker-compose.yml up "${DOCKER_ARGS[@]}"
 fi
