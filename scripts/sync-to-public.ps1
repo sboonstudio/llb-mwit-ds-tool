@@ -89,21 +89,33 @@ Get-ChildItem -Path $ExportPath -Filter "*.md" | Remove-Item -Force -ErrorAction
 
 # 4. สร้าง README.md ใหม่และฝังเวอร์ชัน
 Write-Host "[3/4] Generating Public README.md with version injection..." -ForegroundColor Yellow
+
+# เตรียม Clean Version สำหรับ Public (ลบ -alpha ออก)
+$CleanVersion = $version.Replace("-alpha", "")
 $ReadmeContent = Get-Content $TemplateFile -Raw -Encoding UTF8
-$ReadmeContent = $ReadmeContent.Replace("{{VERSION}}", $version)
+$ReadmeContent = $ReadmeContent.Replace("{{VERSION}}", $CleanVersion)
 [System.IO.File]::WriteAllText((Join-Path $ExportPath "README.md"), $ReadmeContent, [System.Text.Encoding]::UTF8)
+
+# อัปเดตไฟล์ VERSION ในพื้นที่ Export ให้เป็น Clean Version
+Set-Content -Path (Join-Path $ExportPath "VERSION") -Value $CleanVersion
+if (Test-Path (Join-Path $ExportPath "platform/apps/web/VERSION")) {
+    Set-Content -Path (Join-Path $ExportPath "platform/apps/web/VERSION") -Value $CleanVersion
+}
 
 # 5. สรุปผลและสร้าง Tag สำหรับ Public
 Write-Host "[4/4] Synchronization complete. Creating public tag..." -ForegroundColor Yellow
 
-$PublicTagName = "v$($version)-public"
+$PublicTagName = "v$CleanVersion"
 $tagExists = git tag -l $PublicTagName
 if (-not $tagExists) {
-    git tag -a $PublicTagName -m "Public Release $version"
-    Write-Host "Created new public tag: $PublicTagName" -ForegroundColor Green
+    git tag -a $PublicTagName -m "Public Release $CleanVersion"
+    Write-Host "Created new clean public tag: $PublicTagName" -ForegroundColor Green
 } else {
     Write-Host "Tag $PublicTagName already exists." -ForegroundColor Gray
 }
+
+git add .
+git commit -m "chore: sync version $CleanVersion and prepare public release" 2>$null
 
 git status
 Set-Location $MainRepoPath

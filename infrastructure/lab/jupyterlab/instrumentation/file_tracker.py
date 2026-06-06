@@ -9,12 +9,17 @@ from tornado import web
 LOG_SERVER = os.environ.get("LLBRIDGE_LOG_HOST", "llbridge-log-collector")
 LOG_PORT = int(os.environ.get("LLBRIDGE_LOG_PORT", 514))
 
+USER = os.environ.get("JUPYTERHUB_USER", "unknown")
+
 def send_to_syslog(msg_dict):
     try:
-        timestamp = datetime.datetime.utcnow().isoformat() + "Z"
+        # Inject user metadata
+        msg_dict["user"] = USER
+        msg_dict["timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
+        
         host = socket.gethostname()
         msg_json = json.dumps(msg_dict)
-        syslog_msg = f"<14>1 {timestamp} {host} llbridge-file-event {os.getpid()} - - {msg_json}"
+        syslog_msg = f"<14>1 {msg_dict['timestamp']} {host} llbridge-file-event {os.getpid()} - - {msg_json}"
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto(syslog_msg.encode('utf-8'), (LOG_SERVER, LOG_PORT))

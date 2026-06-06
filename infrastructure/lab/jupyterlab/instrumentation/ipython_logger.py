@@ -29,36 +29,111 @@ def send_log(msg_dict):
         pass
 
 def get_notebook_path():
+    """
+    Attempts to determine the active notebook path by inspecting multiple sources.
+    """
     try:
-        # Try to get path from ipykernel if available
+        ip = get_ipython()
+        if not hasattr(ip, 'kernel'):
+            return "unknown"
+            
+        # 1. Try ipykernel parent header metadata (Most reliable in Lab)
+        parent_msg = ip.kernel.get_parent()
+        if parent_msg and 'metadata' in parent_msg:
+            metadata = parent_msg['metadata']
+            # Check common keys used by different Jupyter versions/frontends
+            for key in ['path', 'filename', 'notebook_path']:
+                if key in metadata:
+                    return metadata[key]
+        
+        # 2. Try Jupyter Server API (Internal request)
+        import urllib.request
+        import json
         import ipykernel
-        from notebook.services.contents.filemanager import FileContentsManager
-        # This is often complex in Lab, but we can try to guess from env or CWD
-        return os.getcwd()
+        
+        try:
+            connection_file = os.path.basename(ipykernel.get_connection_file())
+            kernel_id = connection_file.split('-', 1)[1].split('.', 1)[0] if '-' in connection_file else None
+            
+            if kernel_id:
+                # Use environment variables to find the right URL and Token
+                token = os.environ.get("JUPYTER_TOKEN", os.environ.get("JUPYTERHUB_API_TOKEN", ""))
+                prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/")
+                
+                # Single-user server is usually at localhost:8888
+                api_url = f"http://localhost:8888{prefix}api/sessions?token={token}"
+                
+                with urllib.request.urlopen(api_url, timeout=0.3) as response:
+                    if response.getcode() == 200:
+                        sessions = json.loads(response.read().decode())
+                        for session in sessions:
+                            if session.get("kernel", {}).get("id") == kernel_id:
+                                return session.get("path", "unknown")
+        except:
+            pass
+
+        # 3. Fallback to relpath from work root
+        cwd = os.getcwd()
+        work_root = "/home/jovyan/work"
+        if cwd.startswith(work_root):
+            rel = os.path.relpath(cwd, work_root)
+            return rel if rel != "." else "work-root"
+        
+        return os.path.basename(cwd) or "unknown"
     except:
         return "unknown"
 
-def post_run_cell(result):
+# Global to cache code for current execution
+_current_code = "unknown"
+
+def pre_run_cell(info):
+    global _current_code
     try:
+        _current_code = info.raw_cell
+    except:
+        _current_code = "unknown"
+
+def post_run_cell(result):
+    global _current_code
+    try:
+        # Prioritize result.info, fallback to cached _current_code
+        code_content = _current_code
+        if hasattr(result, 'info') and hasattr(result.info, 'raw_cell'):
+            code_content = result.info.raw_cell
+        
+        # If still unknown, try history as last resort
+        if code_content == "unknown" and hasattr(get_ipython(), 'history_manager'):
+            hist = get_ipython().history_manager.input_hist_raw
+            if hist:
+                code_content = hist[-1]
+
         msg = {
             "event": "CELL_EXECUTION",
             "path": get_notebook_path(),
-            "code": result.info.raw_cell,
+            "code": code_content,
             "success": result.success,
-            "execution_count": result.execution_count,
-            "cell_id": getattr(result.info, 'cell_id', 'unknown')
+            "execution_count": getattr(result, 'execution_count', -1),
+            "cell_id": getattr(result.info, 'cell_id', 'unknown') if hasattr(result, 'info') else 'unknown'
         }
-        if not result.success and result.error_in_exec:
-            msg["error_type"] = type(result.error_in_exec).__name__
-            msg["error_msg"] = str(result.error_in_exec)
+        
+        # Handle both execution and compilation (SyntaxError) errors
+        error_obj = getattr(result, 'error_in_exec', None) or getattr(result, 'error_before_exec', None)
+        
+        if not result.success and error_obj:
+            msg["error_type"] = type(error_obj).__name__
+            msg["error_msg"] = str(error_obj)
             
         send_log(msg)
-    except:
-        pass
+    except Exception as e:
+        sys.stderr.write(f">>> LearnLab Logger Error: {str(e)}\n")
+    finally:
+        # Reset for next run
+        _current_code = "unknown"
 
-# Register the hook
+# Register hooks
 ip = get_ipython()
 if ip:
+    ip.events.register('pre_run_cell', pre_run_cell)
     ip.events.register('post_run_cell', post_run_cell)
     # Send Heartbeat on startup
     send_log({"event": "KERNEL_START", "kernel": "python3"})

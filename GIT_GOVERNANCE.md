@@ -43,8 +43,12 @@
 ## 4. มาตรฐานเวอร์ชัน (Versioning & Tags)
 ใช้ระบบ **Semantic Versioning (SemVer)**: `vMAJOR.MINOR.PATCH[-STAGE]`
 
-*   **Single Source of Tag**: ต้องสร้าง Tag ที่ Branch `main` เป็นหลัก
-*   **Dual Remote Sync**: เมื่อสร้าง Tag แล้ว ต้อง Push ไปยังทั้ง `origin` และ `public` remotes เสมอ เพื่อให้เวอร์ชันตรงกัน
+*   **Internal Development**: ใช้ `-alpha` สำหรับเวอร์ชันระหว่างการพัฒนา (เช่น `v0.4.5-alpha`)
+*   **Public Release**: เมื่อ Release สู่สาธารณะ ให้ตัด Suffix ออกเป็นเวอร์ชันสะอาด (เช่น `v0.4.5`)
+*   **Remote Synchronization (Separate & Clean)**:
+    *   **`origin` (Private)**: เก็บ Tag ทุกประเภท (ทั้ง `-alpha` และเวอร์ชันสะอาด) เพื่อเป็นประวัติการพัฒนาที่สมบูรณ์
+    *   **`public` (Public)**: เก็บเฉพาะ **Clean Tags** (เช่น `v0.4.5`) เท่านั้น ห้ามมี `-alpha` หลุดออกไป
+*   **Single Source of Truth**: สร้าง Tag จาก Branch `main` (สำหรับ alpha) หรือจาก Branch `public/export-mwit-ds` (สำหรับ clean release ผ่านสคริปต์) เท่านั้น
 
 ---
 
