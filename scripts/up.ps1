@@ -80,10 +80,10 @@ foreach ($dir in $dataDirs) {
     }
 }
 
-# Sync VERSION file to web app context for Docker build
-if (Test-Path "$repoRoot/VERSION") {
-    Copy-Item "$repoRoot/VERSION" "$repoRoot/platform/apps/web/VERSION" -Force
-    Write-Host "Synced VERSION to web app context." -ForegroundColor Gray
+# Sync VERSION information across the project
+$syncVersionScript = Join-Path $PSScriptRoot "sync-version.ps1"
+if (Test-Path $syncVersionScript) {
+    & $syncVersionScript
 }
 
 # -----------------------------

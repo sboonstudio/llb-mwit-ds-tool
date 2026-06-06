@@ -51,4 +51,9 @@ for pair in "${KEYS_TO_ENSURE[@]}"; do
     fi
 done
 
+# 3. Sync VERSION information across the project
+if [ -f "$SCRIPT_DIR/sync-version.sh" ]; then
+    bash "$SCRIPT_DIR/sync-version.sh"
+fi
+
 echo "Successfully synced environment paths to: $REPO_ROOT"

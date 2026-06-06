@@ -113,6 +113,24 @@ export default function AdminInsights() {
     ],
   };
 
+  // 5. Top Active Files Bar Chart
+  const topFilesOption = {
+    title: { text: "Most Active Notebooks", textStyle: { fontSize: 14 } },
+    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+    grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
+    xAxis: { type: "value" },
+    yAxis: { type: "category", data: data.topFiles.map((f: any) => f.name.split('/').pop()).reverse() },
+    series: [
+      {
+        name: "Executions",
+        type: "bar",
+        data: data.topFiles.map((f: any) => f.value).reverse(),
+        color: "#f59e0b",
+        label: { show: true, position: "right" },
+      },
+    ],
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -130,6 +148,12 @@ export default function AdminInsights() {
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <ReactECharts option={errorOption} style={{ height: "250px" }} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <ReactECharts option={topFilesOption} style={{ height: "300px" }} />
         </div>
       </div>
     </div>

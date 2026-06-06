@@ -165,6 +165,7 @@ function ActivityItem({ log, isCompact }: { log: any, isCompact: boolean }) {
     const isError = details?.success === false;
     const isCode = log.action === "CELL_EXECUTION";
     const isShell = log.action === "SHELL_CMD";
+    const isFile = log.action.startsWith("FILE_");
 
     const content = (
         <div className="border-t border-slate-50 bg-slate-50/30 px-6 py-4 text-xs">
@@ -174,6 +175,12 @@ function ActivityItem({ log, isCompact }: { log: any, isCompact: boolean }) {
                     <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-300">
                         <code>{details?.code}</code>
                     </pre>
+                </div>
+            )}
+            {isFile && (
+                <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-bold">📄 File:</span>
+                    <code className="text-slate-700 font-bold">{details?.path}</code>
                 </div>
             )}
             {isShell && (

@@ -97,11 +97,46 @@ export async function GET() {
       };
     });
 
+    // 5. Most Used Files (from CELL_EXECUTION and FILE_SAVE logs, last 7 days)
+    const cellLogs = await prisma.activityLog.findMany({
+      where: { 
+        action: { in: ["CELL_EXECUTION", "FILE_SAVE"] },
+        timestamp: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        },
+      },
+      select: { details: true },
+    });
+
+    const fileCounts: Record<string, number> = {};
+    cellLogs.forEach((log) => {
+      if (log.details) {
+        try {
+          const details = JSON.parse(log.details);
+          let path = details.path || "unknown";
+          
+          if (path !== "unknown") {
+            // Normalize path: Remove absolute prefix if present
+            path = path.replace(/^\/home\/jovyan\/work\//, "");
+            path = path.replace(/^\/home\/jovyan\//, "");
+            
+            fileCounts[path] = (fileCounts[path] || 0) + 1;
+          }
+        } catch (e) {}
+      }
+    });
+
+    const topFiles = Object.entries(fileCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
     return NextResponse.json({
       usageTrend: usageData,
       errorDistribution,
       engagementData,
       topUsers,
+      topFiles,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
