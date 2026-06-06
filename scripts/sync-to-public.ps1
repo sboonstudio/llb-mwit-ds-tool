@@ -14,7 +14,14 @@ $IgnoreFile = Join-Path $MainRepoPath ".public-ignore"
 $TemplateFile = Join-Path $ScriptDir "PUBLIC_README_TEMPLATE.md"
 $PublicBranch = "public/export-mwit-ds"
 
-Write-Host "--- Starting Public Export Synchronization ---" -ForegroundColor Cyan
+# Get Version
+$VersionFile = Join-Path $MainRepoPath "VERSION"
+$version = "Unknown"
+if (Test-Path $VersionFile) {
+    $version = Get-Content $VersionFile
+}
+
+Write-Host "--- Starting Public Export Synchronization (v$version) ---" -ForegroundColor Cyan
 
 # 1. ตรวจสอบและสร้างโฟลเดอร์ Worktree อัตโนมัติหากไม่พบ
 if (-not (Test-Path $ExportPath)) {
@@ -80,12 +87,23 @@ if (Test-Path $IgnoreFile) {
 # ล้างไฟล์ Markdown เดิมที่ติดมาจาก main (ยกเว้น README ที่จะสร้างใหม่)
 Get-ChildItem -Path $ExportPath -Filter "*.md" | Remove-Item -Force -ErrorAction SilentlyContinue
 
-# 4. สร้าง README.md ใหม่โดยการก๊อปปี้ Byte (รักษา Encoding 100%)
-Write-Host "[3/4] Generating Public README.md using Raw Byte Stream..." -ForegroundColor Yellow
-$Bytes = [System.IO.File]::ReadAllBytes($TemplateFile)
-[System.IO.File]::WriteAllBytes((Join-Path $ExportPath "README.md"), $Bytes)
+# 4. สร้าง README.md ใหม่และฝังเวอร์ชัน
+Write-Host "[3/4] Generating Public README.md with version injection..." -ForegroundColor Yellow
+$ReadmeContent = Get-Content $TemplateFile -Raw -Encoding UTF8
+$ReadmeContent = $ReadmeContent.Replace("{{VERSION}}", $version)
+[System.IO.File]::WriteAllText((Join-Path $ExportPath "README.md"), $ReadmeContent, [System.Text.Encoding]::UTF8)
 
-# 5. สรุปผล
-Write-Host "[4/4] Synchronization complete." -ForegroundColor Yellow
+# 5. สรุปผลและสร้าง Tag สำหรับ Public
+Write-Host "[4/4] Synchronization complete. Creating public tag..." -ForegroundColor Yellow
+
+$PublicTagName = "v$($version)-public"
+$tagExists = git tag -l $PublicTagName
+if (-not $tagExists) {
+    git tag -a $PublicTagName -m "Public Release $version"
+    Write-Host "Created new public tag: $PublicTagName" -ForegroundColor Green
+} else {
+    Write-Host "Tag $PublicTagName already exists." -ForegroundColor Gray
+}
+
 git status
 Set-Location $MainRepoPath

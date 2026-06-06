@@ -116,12 +116,15 @@ export default async function DashboardPage() {
           </div>
           <div className="flex flex-col gap-3 sm:items-end">
             <div className="flex items-center gap-3">
-              <Link 
-                href="/about"
-                className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
-              >
-                About System
-              </Link>
+              <div className="flex flex-col items-end">
+                <Link 
+                  href="/about"
+                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+                >
+                  About System
+                </Link>
+                <span className="text-[9px] font-mono text-slate-300">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+              </div>
               <div className="h-4 w-px bg-slate-200"></div>
               <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${
                 dbUser.role === "ADMIN" ? "bg-red-100 text-red-700" :

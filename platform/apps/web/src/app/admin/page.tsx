@@ -30,7 +30,10 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-center justify-between border-b border-slate-200 pb-6">
           <div>
-            <p className="text-sm font-medium text-slate-500">LearnLab Bridge Control</p>
+            <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-slate-500">LearnLab Bridge Control</p>
+                <span className="text-[10px] font-mono text-slate-300">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+            </div>
             <h1 className="text-3xl font-semibold">User Management</h1>
           </div>
           <div className="flex gap-3">

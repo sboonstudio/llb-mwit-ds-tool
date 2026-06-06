@@ -81,9 +81,12 @@ function LoginForm() {
             
             <div className="mt-16 flex items-center gap-4 border-t border-indigo-800 pt-8">
                 <PublicSystemStatus />
-                <Link href="/about" className="text-xs font-bold text-indigo-300 hover:text-white transition-colors uppercase tracking-widest">
-                    Project Documentation →
-                </Link>
+                <div className="flex flex-col gap-1">
+                    <Link href="/about" className="text-xs font-bold text-indigo-300 hover:text-white transition-colors uppercase tracking-widest">
+                        Project Documentation →
+                    </Link>
+                    <span className="text-[10px] font-mono text-indigo-400 opacity-60">Version {process.env.NEXT_PUBLIC_APP_VERSION}</span>
+                </div>
             </div>
         </div>
       </div>
