@@ -22,33 +22,42 @@ export async function POST(req: NextRequest) {
     const records = Array.isArray(data) ? data : [data];
     
     for (const record of records) {
-      // Vector syslog format usually has a 'message' field
       let type = record.type;
-      let username = record.username;
-      let action = record.action;
+      let username = record.username || record.user;
+      let action = record.action || record.event;
       let details = record.details;
       let metrics = record.metrics;
-      let ipAddress = record.ipAddress;
-      let timestamp = record.timestamp || record.recordedAt;
+      let ipAddress = record.ipAddress || record.host;
+      let timestamp = record.timestamp || record.recordedAt || record.processed_at;
 
-      // If it's from Vector (Syslog), extract from message
-      if (record.message && typeof record.message === "string") {
+      // If it's from Vector (Syslog), and not yet fully parsed or missing fields
+      if (record.message && typeof record.message === "string" && !action) {
         try {
-          const inner = JSON.parse(record.message);
-          if (inner.event) {
-            type = "ACTIVITY";
-            action = inner.event;
-            details = inner;
-            // Use hostname as a hint for username if not present
-            // In our system, hostname is 'llbridge-lab-{username}'
-            if (!username && record.host) {
-               username = record.host.replace("llbridge-lab-", "");
+          // Extract JSON part from Syslog message if possible
+          const jsonMatch = record.message.match(/\{.*\}/);
+          if (jsonMatch) {
+            const inner = JSON.parse(jsonMatch[0]);
+            if (inner.event) {
+              type = "ACTIVITY";
+              action = inner.event;
+              details = inner;
+              if (!username) username = inner.user;
             }
           }
         } catch (e) {
-          // Not JSON, skip or log as raw
-          continue;
+          // Not JSON, skip
         }
+      }
+
+      // If action exists but details is empty, use the record itself as details (excluding large fields)
+      if (action && !details) {
+          const { message, ...rest } = record;
+          details = rest;
+      }
+
+      // Default type if action exists
+      if (action && !type) {
+        type = "ACTIVITY";
       }
 
       if (!username) continue;
@@ -56,8 +65,8 @@ export async function POST(req: NextRequest) {
       // Find internal User by username
       const allUsers = await prisma.user.findMany();
       const targetUser = allUsers.find(u => {
-          const wsName = (u.email || u.id)
-              .toLowerCase()
+          const email = (u.email || "").toLowerCase();
+          const wsName = email
               .replace(/[^a-z0-9._-]+/g, "-")
               .replace(/^-+|-+$/g, "")
               .slice(0, 80);
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
             userId: targetUser.id,
             action: action || "UNKNOWN_ACTION",
             details: details ? JSON.stringify(details) : null,
-            ipAddress: ipAddress,
+            ipAddress: String(ipAddress || ""),
             timestamp: timestamp ? new Date(timestamp) : undefined,
           },
         });

@@ -63,6 +63,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/jupyterhub:/srv/jupyterhub
       - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/lab-workspaces:/srv/jupyterhub/workspaces
+      - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/lab/jupyterlab/instrumentation:/opt/llbridge/instrumentation:ro
     restart: always
 
   llbridge-proxy:
