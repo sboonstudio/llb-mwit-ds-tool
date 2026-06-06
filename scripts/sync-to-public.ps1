@@ -94,12 +94,13 @@ Write-Host "[3/4] Generating Public README.md with version injection..." -Foregr
 $CleanVersion = $version.Replace("-alpha", "")
 $ReadmeContent = Get-Content $TemplateFile -Raw -Encoding UTF8
 $ReadmeContent = $ReadmeContent.Replace("{{VERSION}}", $CleanVersion)
-[System.IO.File]::WriteAllText((Join-Path $ExportPath "README.md"), $ReadmeContent, [System.Text.Encoding]::UTF8)
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Join-Path $ExportPath "README.md"), $ReadmeContent, $Utf8NoBom)
 
 # อัปเดตไฟล์ VERSION ในพื้นที่ Export ให้เป็น Clean Version
-Set-Content -Path (Join-Path $ExportPath "VERSION") -Value $CleanVersion
+[System.IO.File]::WriteAllText((Join-Path $ExportPath "VERSION"), $CleanVersion, $Utf8NoBom)
 if (Test-Path (Join-Path $ExportPath "platform/apps/web/VERSION")) {
-    Set-Content -Path (Join-Path $ExportPath "platform/apps/web/VERSION") -Value $CleanVersion
+    [System.IO.File]::WriteAllText((Join-Path $ExportPath "platform/apps/web/VERSION"), $CleanVersion, $Utf8NoBom)
 }
 
 # 5. สรุปผลและสร้าง Tag สำหรับ Public
