@@ -38,11 +38,16 @@
 ## 🚀 ขั้นตอนที่ 3: การรันระบบ (Deployment)
 
 1.  รันสคริปต์เพื่อเริ่มต้นระบบ (ระบบจะทำจัดการ Build Image และตั้งค่าฐานข้อมูลให้โดยอัตโนมัติ):
-    *   **สำหรับ PowerShell (Windows)**:
+    *   **สำหรับ PowerShell (แนะนำ)**:
+        เปิด PowerShell ในโฟลเดอร์โครงการแล้วรัน:
         ```powershell
-        .\scripts\up.ps1
+        powershell -noexit -ExecutionPolicy Bypass -File ".\scripts\up.ps1"
         ```
-        *(หากพบปัญหา Permission ให้รัน: `Set-ExecutionPolicy Bypass -Scope Process; .\scripts\up.ps1`)*
+    *   **สำหรับ Command Prompt (CMD)**:
+        เปิด CMD ในโฟลเดอร์โครงการแล้วรัน:
+        ```cmd
+        .\scripts\up.cmd
+        ```
     *   **สำหรับ Bash (Linux/WSL)**:
         ```bash
         ./scripts/up.sh
