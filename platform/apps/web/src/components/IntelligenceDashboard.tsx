@@ -141,7 +141,33 @@ export default function IntelligenceDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Hierarchical Topic Analysis (Table Style for better drill-down) */}
+      <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  System Status: Fully Operational
+              </p>
+          </div>
+          <div className="flex items-center gap-4">
+              {data.lastSyncedAt && (
+                  <p className="text-[10px] font-medium text-slate-400">
+                      Last Updated: {new Date(data.lastSyncedAt).toLocaleString()}
+                  </p>
+              )}
+              <button 
+                onClick={handleSync}
+                disabled={syncing}
+                className="inline-flex h-8 items-center gap-2 rounded-md bg-white border border-slate-200 px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
+                <svg className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {syncing ? "SYNCING..." : "SYNC NOW"}
+              </button>
+          </div>
+      </div>
+
+      {/* 1. Hierarchical Topic Analysis */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-4 text-sm font-bold text-slate-700">File-Centric Learning Progress</h3>
         <div className="overflow-x-auto">

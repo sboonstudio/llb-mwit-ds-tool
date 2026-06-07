@@ -9,19 +9,31 @@ import path from "path";
 export async function syncIntelligence() {
   console.log(">>> Starting Intelligence Synchronization...");
 
-  // 1. ดึง Log ทั้งหมด (หรือดึงเฉพาะช่วงเวลาที่ต้องการ ในที่นี้ขอเริ่มที่ทั้งหมดเพื่อความแม่นยำ)
-  // ในอนาคตควรเก็บ Checkpoint ว่าประมวลผลถึง ID ไหนแล้ว
+  // 1. ดึง Checkpoint ล่าสุดจาก SystemConfig
+  const config = await prisma.systemConfig.upsert({
+    where: { id: "CURRENT" },
+    update: {},
+    create: { id: "CURRENT" },
+  });
+
+  const lastId = config.lastSyncedLogId;
+
+  // 2. ดึง Log เฉพาะที่ยังไม่ได้ประมวลผล (ID > lastId)
   const logs = await prisma.activityLog.findMany({
+    where: lastId ? { id: { gt: lastId } } : {},
     orderBy: { timestamp: "asc" },
   });
 
-  if (logs.length === 0) return { success: true, processed: 0 };
+  if (logs.length === 0) {
+    return { success: true, processed: 0, message: "Already up to date." };
+  }
 
   let processedCount = 0;
+  let lastProcessedId = lastId;
 
   for (const log of logs) {
     const date = new Date(log.timestamp);
-    date.setHours(0, 0, 0, 0); // ตั้งค่าเป็น 00:00 ของวันนั้น
+    date.setHours(0, 0, 0, 0);
 
     const userId = log.userId;
     if (!userId) continue;
@@ -33,26 +45,21 @@ export async function syncIntelligence() {
         const filePath = details.path || "unknown";
         const fileName = path.basename(filePath);
         
-        // สกัดนามสกุลไฟล์
         const fileExtension = fileName.includes(".") 
           ? fileName.split(".").pop()?.toLowerCase() || "" 
           : "no-ext";
         
-        // ตรวจสอบว่าเป็นไฟล์ที่ต้องการติดตามหรือไม่ (.ipynb, .py, .c, .cpp, .r)
         const trackedExtensions = ["ipynb", "py", "c", "cpp", "r"];
         if (trackedExtensions.includes(fileExtension)) {
-          // หาชื่อ Folder (Topic) - เน้นโฟลเดอร์ระดับบนที่จัดกลุ่มบทเรียน
           const pathParts = filePath.split("/").filter((p: string) => p && p !== ".");
           let folderName = "root";
           if (pathParts.length > 1) {
-              // กรณีอยู่ในโฟลเดอร์: เช่น 'lab01/intro.ipynb' -> folderName = 'lab01'
               folderName = pathParts[0]; 
           }
 
           const isSuccess = details.success !== false;
           const errorType = details.error_name || (isSuccess ? null : "UnknownError");
 
-          // อัปเดต ExecutionStats (Aggregation โดยใช้ Date, User, และ FilePath)
           await prisma.executionStats.upsert({
             where: {
               date_userId_filePath: {
@@ -77,7 +84,6 @@ export async function syncIntelligence() {
             },
           });
 
-          // หากมี Error ให้อัปเดต ErrorAnalytics
           if (!isSuccess && errorType) {
             await prisma.errorAnalytics.upsert({
               where: {
@@ -106,7 +112,6 @@ export async function syncIntelligence() {
 
     // --- B. ประมวลผลการจัดการระบบ (SystemOpsStats) ---
     const systemActions: Record<string, { group: string; type: string }> = {
-      // กลุ่ม Environment Lifecycle (ยกระดับการวิเคราะห์ความพร้อม)
       "SPAWN_LAB": { group: "ENV_LIFECYCLE", type: "READY_LAB" },
       "LAB_SPAWN": { group: "ENV_LIFECYCLE", type: "READY_LAB" },
       "KERNEL_START": { group: "ENV_LIFECYCLE", type: "READY_KERNEL" },
@@ -114,18 +119,13 @@ export async function syncIntelligence() {
       "STOP_LAB": { group: "ENV_LIFECYCLE", type: "STOP_ENV" },
       "KERNEL_STOP": { group: "ENV_LIFECYCLE", type: "STOP_ENV" },
       "RESTART_LAB": { group: "ENV_LIFECYCLE", type: "RESTART" },
-
-      // กลุ่ม Workspace (การจัดการไฟล์)
       "CREATE_FILE": { group: "WORKSPACE", type: "CREATE" },
       "DELETE_FILE": { group: "WORKSPACE", type: "DELETE" },
       "RENAME_FILE": { group: "WORKSPACE", type: "RENAME" },
       "MOVE_FILE": { group: "WORKSPACE", type: "MOVE" },
     };
 
-    // ตรวจสอบทั้ง Action ตรงๆ และ Action ที่อาจจะมาในรูปแบบ string อื่นๆ
     let matchedAction = systemActions[log.action];
-    
-    // เคสพิเศษสำหรับ JupyterHub Launch
     if (!matchedAction && log.action.includes("JupyterHub Launch")) {
         matchedAction = { group: "ENV_LIFECYCLE", type: "READY_LAB" };
     }
@@ -154,7 +154,6 @@ export async function syncIntelligence() {
     }
 
     // --- C. ประมวลผลสถิติรายวัน (DailyUserStats) ---
-    // (ในเวอร์ชันนี้เน้น Session Count ก่อน ส่วน Active Minutes จะใช้การคำนวณที่ซับซ้อนขึ้นในภายหลัง)
     if (matchedAction?.type === "READY_LAB") {
       await prisma.dailyUserStats.upsert({
         where: {
@@ -176,8 +175,18 @@ export async function syncIntelligence() {
     }
 
     processedCount++;
+    lastProcessedId = log.id;
   }
 
-  console.log(`>>> Intelligence Synchronization Completed. Processed ${processedCount} logs.`);
-  return { success: true, processed: processedCount };
+  // 3. อัปเดต Checkpoint หลังประมวลผลเสร็จ
+  await prisma.systemConfig.update({
+    where: { id: "CURRENT" },
+    data: {
+      lastSyncedLogId: lastProcessedId,
+      lastSyncedAt: new Date(),
+    },
+  });
+
+  console.log(`>>> Intelligence Synchronization Completed. Processed ${processedCount} new logs.`);
+  return { success: true, processed: processedCount, lastSyncedAt: new Date() };
 }

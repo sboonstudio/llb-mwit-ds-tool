@@ -57,6 +57,10 @@ model SystemConfig {
   alertWindowMins Int     @default(60) // Window size in minutes
   notifyEmail     String?
   enableAlerts    Boolean @default(false)
+
+  // Intelligence Checkpoints
+  lastSyncedLogId String?
+  lastSyncedAt    DateTime?
   
   updatedAt       DateTime @updatedAt
 }
