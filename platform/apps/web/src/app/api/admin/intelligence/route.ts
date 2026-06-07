@@ -85,6 +85,13 @@ export async function GET() {
       where: { id: "CURRENT" },
     });
 
+    // 6. TOTAL ACTIVE MINUTES
+    const dailyStats = await prisma.dailyUserStats.aggregate({
+        _sum: {
+          activeMinutes: true,
+        },
+    });
+
     return NextResponse.json({
       topics,
       envLifecycle,
@@ -96,6 +103,7 @@ export async function GET() {
         count: e.count,
       })),
       lastSyncedAt: config?.lastSyncedAt,
+      totalActiveMinutes: dailyStats._sum.activeMinutes || 0,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
