@@ -123,6 +123,7 @@ model SystemOpsStats {
   count           Int      @default(1)
   updatedAt       DateTime @updatedAt
 
+  @@unique([date, userId, actionGroup, actionType])
   @@index([date, actionGroup])
   @@index([actionType])
 }

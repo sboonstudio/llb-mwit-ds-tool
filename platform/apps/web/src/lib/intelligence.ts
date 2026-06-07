@@ -131,8 +131,19 @@ export async function syncIntelligence() {
     }
 
     if (matchedAction) {
-      await prisma.systemOpsStats.create({
-        data: {
+      await prisma.systemOpsStats.upsert({
+        where: {
+          date_userId_actionGroup_actionType: {
+            date,
+            userId,
+            actionGroup: matchedAction.group,
+            actionType: matchedAction.type,
+          },
+        },
+        update: {
+          count: { increment: 1 },
+        },
+        create: {
           date,
           userId,
           actionGroup: matchedAction.group,
