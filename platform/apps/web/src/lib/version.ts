@@ -1,4 +1,4 @@
-﻿import fs from "fs";
+import fs from "fs";
 import path from "path";
 
 /**
@@ -23,10 +23,5 @@ export function getProjectVersion(): string {
     console.error("Failed to read VERSION file:", error);
   }
 
-<<<<<<< HEAD
-  return "0.4.5"; // Final fallback
-=======
-  return "0.4.6-alpha"; // Final fallback
->>>>>>> main
+  return "0.4.6"; // Final fallback
 }
-
