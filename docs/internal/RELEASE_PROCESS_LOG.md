@@ -70,5 +70,19 @@ git -C learnlab-bridge-export push public public/export-mwit-ds
 git -C learnlab-bridge-export push github public/export-mwit-ds:main --force
 ```
 
+## 7. Classroom Intelligence Enhancements (v0.4.6)
+Implemented a robust analytics infrastructure to provide pedagogical insights for instructors.
+
+### Key Technical Implementations:
+- **Incremental Sync (Checkpoint System)**: Added `lastSyncedLogId` to `SystemConfig` and updated `syncIntelligence` to process only new logs, significantly improving performance.
+- **Background Automation**: Leveraged Next.js `instrumentation.ts` to run a background scheduler that auto-syncs data every 10 minutes.
+- **Pedagogical Topic Mapping**: Implemented a mapping system in `lib/intelligence.ts` that translates folder slugs (e.g., `lab01`) into human-readable lesson names (e.g., "Intro to Data Science").
+- **Engagement Metrics**: Added calculation for "Active Minutes" based on continuous session activity (10-minute threshold between events).
+- **Dashboard UI**: Added a "Sync Now" button, last update timestamps, and new KPI cards for total engagement.
+
+### Database Migrations:
+- `20260607094653_add_unique_to_system_ops`: Added unique constraint to prevent duplicate stats.
+- `20260607105159_add_sync_checkpoints`: Added checkpoint fields to track sync progress.
+
 ---
 *This log is maintained for agent continuity and audit purposes.*
