@@ -57,5 +57,18 @@ git -C learnlab-bridge-export push origin public/export-mwit-ds v0.4.6
 git -C learnlab-bridge restore platform/apps/web/prisma/prisma/dev.db-journal
 ```
 
+## 6. Conflict Resolution (Post-Sync)
+Due to automatic merge conflicts during `sync-to-public.ps1`, the following files were manually fixed to remove git conflict markers and ensure correct versioning (`0.4.6` instead of `0.4.6-alpha`):
+- `platform/apps/web/package.json`
+- `platform/apps/web/src/lib/version.ts`
+
+```bash
+git -C learnlab-bridge-export add platform/apps/web/package.json platform/apps/web/src/lib/version.ts
+git -C learnlab-bridge-export commit -m "fix: resolve merge conflicts in package.json and version.ts"
+git -C learnlab-bridge-export push origin public/export-mwit-ds
+git -C learnlab-bridge-export push public public/export-mwit-ds
+git -C learnlab-bridge-export push github public/export-mwit-ds:main --force
+```
+
 ---
 *This log is maintained for agent continuity and audit purposes.*
