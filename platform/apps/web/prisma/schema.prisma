@@ -28,6 +28,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   activityLogs  ActivityLog[]
   resourceUsage ResourceUsage[]
+  dailyStats    DailyUserStats[]
+  executionStats ExecutionStats[]
+  systemOpsStats SystemOpsStats[]
 }
 
 model ActivityLog {
@@ -65,4 +68,74 @@ model ResourceUsage {
   memoryUsage Float    // Memory in MB
   recordedAt  DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- Learning Intelligence Aggregation Tables ---
+
+// 1. สรุปพฤติกรรมรายวันของผู้ใช้
+model DailyUserStats {
+  id                String   @id @default(cuid())
+  date              DateTime
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeMinutes     Int      @default(0) // รวมเวลาที่ใช้งาน Lab (นาที)
+  sessionCount      Int      @default(0) // จำนวนครั้งที่ Launch Lab
+  updatedAt         DateTime @updatedAt
+
+  @@unique([date, userId])
+}
+
+// 2. สรุปการรันโค้ด (Execution Content Intelligence)
+// จัดกลุ่มตาม Folder (Topic) และไฟล์ (Executable: .ipynb, .py, .c, .cpp, .r)
+model ExecutionStats {
+  id              String   @id @default(cuid())
+  date            DateTime
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  filePath        String   // Path เต็มของไฟล์
+  fileName        String   // ชื่อไฟล์ (เช่น lab1.ipynb)
+  fileExtension   String   // นามสกุลไฟล์ (เช่น ipynb, py, c, cpp, r)
+  folderName      String   // ชื่อโฟลเดอร์หลัก (Topic Name)
+  
+  successCount    Int      @default(0)
+  errorCount      Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([date, userId, filePath])
+  @@index([fileExtension])
+  @@index([folderName])
+}
+
+// 3. สรุปการจัดการระบบ (System & Workspace Ops)
+// จัดกลุ่มเป็น 1. ระบบ (LIFECYCLE: OPEN, CLOSE, RESTART) และ 2. งาน (WORKSPACE: CREATE, DELETE, RENAME, MOVE)
+model SystemOpsStats {
+  id              String   @id @default(cuid())
+  date            DateTime
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  actionGroup     String   // LIFECYCLE หรือ WORKSPACE
+  actionType      String   // OPEN, CLOSE, RESTART, CREATE, DELETE, RENAME, MOVE
+  
+  count           Int      @default(1)
+  updatedAt       DateTime @updatedAt
+
+  @@index([date, actionGroup])
+  @@index([actionType])
+}
+
+// 4. วิเคราะห์ Error รายวัน
+model ErrorAnalytics {
+  id          String   @id @default(cuid())
+  date              DateTime
+
+  errorType   String   // เช่น SyntaxError, NameError, ImportError
+  count       Int      @default(0)
+  sampleCode  String? // ตัวอย่างโค้ดที่เกิด Error (ถ้ามี)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date, errorType])
 }

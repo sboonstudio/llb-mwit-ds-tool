@@ -37,32 +37,6 @@ export default async function DashboardPage() {
     take: 20,
   });
 
-  // Calculate quick stats for the user
-  const stats = {
-    totalExecutions: logs.filter(l => l.action === "CELL_EXECUTION").length,
-    successRate: 0,
-    mostActiveFile: "N/A"
-  };
-
-  const executions = logs.filter(l => l.action === "CELL_EXECUTION");
-  if (executions.length > 0) {
-    const successCount = executions.filter(l => {
-        try {
-            return JSON.parse(l.details || "{}").success !== false;
-        } catch(e) { return true; }
-    }).length;
-    stats.successRate = Math.round((successCount / executions.length) * 100);
-    
-    const fileCounts: Record<string, number> = {};
-    executions.forEach(l => {
-        try {
-            const path = JSON.parse(l.details || "{}").path || "unknown";
-            fileCounts[path] = (fileCounts[path] || 0) + 1;
-        } catch(e) {}
-    });
-    stats.mostActiveFile = Object.entries(fileCounts).sort((a, b) => b[1] - a[1])[0]?.[0].split('/').pop() || "N/A";
-  }
-
   const latestUsage = await prisma.resourceUsage.findFirst({
     where: { userId: session.user.id },
     orderBy: { recordedAt: "desc" },
@@ -299,31 +273,6 @@ export default async function DashboardPage() {
           </div>
 
           <div className="p-6">
-            {/* Top KPI Metrics Row */}
-            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-indigo-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Code Runs</p>
-                    <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-slate-800">{stats.totalExecutions}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">executions</span>
-                    </div>
-                </div>
-                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-emerald-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Success Rate</p>
-                    <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-emerald-600">{stats.successRate}%</span>
-                        <span className="text-[10px] text-emerald-400 font-medium">accuracy</span>
-                    </div>
-                </div>
-                <div className="group rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-blue-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Most Used File</p>
-                    <div className="mt-1">
-                        <p className="truncate text-lg font-bold text-slate-800" title={stats.mostActiveFile}>{stats.mostActiveFile}</p>
-                        <p className="text-[10px] text-blue-400 font-medium">active workspace</p>
-                    </div>
-                </div>
-            </div>
-
             {/* Detailed Activity Insights with Search & Filter */}
             <ActivityIntelligence initialLogs={logs} />
           </div>

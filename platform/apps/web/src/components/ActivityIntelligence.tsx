@@ -18,6 +18,34 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
   const [isCompact, setIsCompact] = useState(false);
   const [showSystemEvents, setShowSystemEvents] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleAll = (expand: boolean) => {
+    const newState: Record<string, boolean> = {};
+    if (expand) {
+      groupedData.forEach(g => newState[g.id] = true);
+    }
+    setExpandedGroups(newState);
+  };
+
+  interface ActivityGroup {
+    id: string;
+    title: string;
+    type: 'FILE' | 'ENV' | 'OTHER';
+    path?: string;
+    logs: any[];
+    lastTimestamp: string | Date;
+    hasError: boolean;
+    stats: {
+      success: number;
+      error: number;
+      total: number;
+    };
+  }
 
   const filteredLogs = useMemo(() => {
     return initialLogs.filter((log) => {
@@ -50,8 +78,136 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
     });
   }, [initialLogs, search, filterStatus, filterType, showSystemEvents]);
 
+  const groupedData = useMemo(() => {
+    const groups: Record<string, ActivityGroup> = {};
+
+    filteredLogs.forEach(log => {
+      let details: any = {};
+      try { details = log.details ? JSON.parse(log.details) : {}; } catch(e) {}
+
+      let groupKey = "";
+      let groupTitle = "";
+      let groupType: 'FILE' | 'ENV' | 'OTHER' = 'OTHER';
+
+      const isEnv = ["LAB_SPAWN", "LAB_STOP", "KERNEL_START", "KERNEL_STOP"].includes(log.action) || 
+                    log.action.includes("JupyterHub Launch");
+
+      if (isEnv) {
+        groupKey = "ENVIRONMENT";
+        groupTitle = "Environment Lifecycle";
+        groupType = 'ENV';
+      } else if (log.action === "CELL_EXECUTION" || log.action.startsWith("FILE_")) {
+        const path = details.path || "unknown";
+        groupKey = `FILE:${path}`;
+        groupTitle = path.split('/').pop() || path;
+        groupType = 'FILE';
+      } else {
+        groupKey = "OTHER";
+        groupTitle = "Other Activities";
+        groupType = 'OTHER';
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          id: groupKey,
+          title: groupTitle,
+          type: groupType,
+          path: details.path,
+          logs: [],
+          lastTimestamp: log.timestamp,
+          hasError: false,
+          stats: { success: 0, error: 0, total: 0 }
+        };
+      }
+
+      groups[groupKey].logs.push(log);
+      groups[groupKey].stats.total++;
+      if (details.success === false) {
+          groups[groupKey].hasError = true;
+          groups[groupKey].stats.error++;
+      } else {
+          groups[groupKey].stats.success++;
+      }
+
+      if (new Date(log.timestamp) > new Date(groups[groupKey].lastTimestamp)) {
+        groups[groupKey].lastTimestamp = log.timestamp;
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => 
+      new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime()
+    );
+  }, [filteredLogs]);
+
+  // --- NEW: Adaptive KPI Calculation ---
+  const kpis = useMemo(() => {
+    const executions = filteredLogs.filter(l => l.action === "CELL_EXECUTION");
+    const total = executions.length;
+    const errors = executions.filter(l => {
+        try { return JSON.parse(l.details || "{}").success === false; } catch(e) { return false; }
+    }).length;
+    
+    const successRate = total > 0 ? Math.round(((total - errors) / total) * 100) : 100;
+
+    // Most active file in filtered set
+    const fileCounts: Record<string, number> = {};
+    executions.forEach(l => {
+        try {
+            const path = JSON.parse(l.details || "{}").path || "unknown";
+            fileCounts[path] = (fileCounts[path] || 0) + 1;
+        } catch(e) {}
+    });
+    const topFile = Object.entries(fileCounts).sort((a, b) => b[1] - a[1])[0]?.[0].split('/').pop() || "N/A";
+
+    return { total, successRate, topFile, errorCount: errors };
+  }, [filteredLogs]);
+
   return (
-    <div className="rounded-xl border border-slate-100 bg-white">
+    <div className="space-y-6">
+      {/* Dynamic KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <button 
+            onClick={() => { setFilterType("CELL_EXECUTION"); setFilterStatus("ALL"); }}
+            className="group text-left rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-indigo-100"
+          >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Execution Volume</p>
+              <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-slate-800">{kpis.total}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">runs</span>
+              </div>
+              <p className="mt-1 text-[9px] text-indigo-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity">VIEW ALL CODE RUNS →</p>
+          </button>
+
+          <button 
+            onClick={() => { setFilterStatus("ERROR"); setFilterType("CELL_EXECUTION"); }}
+            className={`group text-left rounded-xl border p-4 transition-all hover:bg-white hover:shadow-md ${
+                kpis.successRate < 70 ? "border-red-100 bg-red-50/30 hover:border-red-200" : "border-emerald-100 bg-emerald-50/30 hover:border-emerald-200"
+            }`}
+          >
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${kpis.successRate < 70 ? "text-red-400" : "text-emerald-400"}`}>Success Precision</p>
+              <div className="mt-1 flex items-baseline gap-2">
+                  <span className={`text-3xl font-black ${kpis.successRate < 70 ? "text-red-600" : "text-emerald-600"}`}>{kpis.successRate}%</span>
+                  <span className={`text-[10px] font-medium ${kpis.successRate < 70 ? "text-red-400" : "text-emerald-400"}`}>accuracy</span>
+              </div>
+              <p className={`mt-1 text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity ${kpis.successRate < 70 ? "text-red-500" : "text-emerald-500"}`}>
+                  {kpis.errorCount > 0 ? `INVESTIGATE ${kpis.errorCount} ERRORS →` : "PERFECT STABILITY"}
+              </p>
+          </button>
+
+          <button 
+            onClick={() => setSearch(kpis.topFile !== "N/A" ? kpis.topFile : "")}
+            className="group text-left rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-blue-100"
+          >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Primary Workspace</p>
+              <div className="mt-1">
+                  <p className="truncate text-lg font-bold text-slate-800" title={kpis.topFile}>{kpis.topFile}</p>
+                  <p className="text-[10px] text-blue-400 font-medium">active focus</p>
+              </div>
+              <p className="mt-1 text-[9px] text-blue-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase">Filter by this file →</p>
+          </button>
+      </div>
+
+      <div className="rounded-xl border border-slate-100 bg-white">
       {/* Search & Filter Bar */}
       <div className="flex flex-col gap-4 border-b border-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 items-center gap-2">
@@ -115,6 +271,21 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
       {/* Settings Sub-Panel */}
       {isSettingsOpen && (
         <div className="flex flex-wrap items-center gap-6 bg-slate-50/50 px-6 py-3 border-b border-slate-50 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => toggleAll(true)}
+                    className="text-[9px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-tighter"
+                >
+                    Expand All
+                </button>
+                <span className="text-slate-300">|</span>
+                <button 
+                    onClick={() => toggleAll(false)}
+                    className="text-[9px] font-bold text-slate-500 hover:text-slate-600 uppercase tracking-tighter"
+                >
+                    Collapse All
+                </button>
+            </div>
             <label className="flex cursor-pointer items-center gap-2 group">
                 <input 
                     type="checkbox" 
@@ -139,11 +310,79 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
         </div>
       )}
 
-      <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
-        {filteredLogs.length > 0 ? (
-          filteredLogs.map((log) => (
-            <ActivityItem key={log.id} log={log} isCompact={isCompact} />
-          ))
+      <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+        {groupedData.length > 0 ? (
+          groupedData.map((group) => {
+            const isExpanded = expandedGroups[group.id];
+            const successRate = Math.round((group.stats.success / (group.stats.total || 1)) * 100);
+
+            return (
+              <div key={group.id} className="border-b border-slate-50 last:border-0">
+                  {/* Group Header (Interactive Summary) */}
+                  <button 
+                    onClick={() => toggleGroup(group.id)}
+                    className={`sticky top-0 z-10 flex w-full items-center justify-between px-6 py-3 transition-all hover:bg-slate-100/80 ${
+                      group.hasError ? "bg-red-50/90" : "bg-slate-50/90"
+                    } backdrop-blur-md`}
+                  >
+                      <div className="flex flex-1 items-center gap-4">
+                          <div className="flex items-center gap-2">
+                              <span className={`flex h-5 w-5 items-center justify-center rounded-md text-xs ${
+                                  group.type === 'FILE' ? "bg-blue-100 text-blue-600" : 
+                                  group.type === 'ENV' ? "bg-slate-200 text-slate-600" : 
+                                  "bg-amber-100 text-amber-600"
+                              }`}>
+                                  {group.type === 'FILE' ? "📗" : group.type === 'ENV' ? "⚙️" : "📦"}
+                              </span>
+                              <h4 className={`text-[11px] font-black uppercase tracking-wider ${
+                                  group.hasError ? "text-red-700" : "text-slate-700"
+                              }`}>
+                                  {group.title}
+                              </h4>
+                          </div>
+
+                          {/* Aggregate Metadata (Success Bar) */}
+                          {group.type === 'FILE' && (
+                              <div className="hidden items-center gap-3 md:flex">
+                                  <div className="h-1.5 w-24 rounded-full bg-slate-200 overflow-hidden shadow-inner">
+                                      <div 
+                                          className={`h-full transition-all duration-500 ${successRate === 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                                          style={{ width: `${successRate}%` }}
+                                      ></div>
+                                  </div>
+                                  <span className={`text-[9px] font-bold ${successRate < 70 ? "text-red-500" : "text-slate-400"}`}>
+                                      {successRate}% SUCCESS
+                                  </span>
+                              </div>
+                          )}
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                          <div className="text-right">
+                              <p className="text-[10px] font-bold text-slate-500 uppercase">
+                                  {group.stats.total} {group.stats.total === 1 ? 'Action' : 'Actions'}
+                              </p>
+                              <p className="text-[9px] font-mono text-slate-300">
+                                  LAST: {new Date(group.lastTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                          </div>
+                          <svg className={`h-4 w-4 text-slate-300 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                      </div>
+                  </button>
+
+                  {/* Nested Logs (Conditionally Rendered) */}
+                  {isExpanded && (
+                    <div className="divide-y divide-slate-50/50 bg-white/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {group.logs.map((log) => (
+                            <ActivityItem key={log.id} log={log} isCompact={isCompact} />
+                        ))}
+                    </div>
+                  )}
+              </div>
+            );
+          })
         ) : (
           <div className="py-12 text-center text-sm text-slate-400 italic">
             {search || filterStatus !== "ALL" || filterType !== "ALL" || !showSystemEvents
@@ -153,6 +392,7 @@ export default function ActivityIntelligence({ initialLogs }: { initialLogs: any
         )}
       </div>
     </div>
+  </div>
   );
 }
 

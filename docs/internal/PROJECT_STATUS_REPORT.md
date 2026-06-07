@@ -1,8 +1,8 @@
-# Project Status: LearnLab Bridge (v0.4.5-alpha)
-*Date: 2026-06-06*
+# Project Status: LearnLab Bridge (v0.4.6-alpha)
+*Date: 2026-06-07*
 
 ## 1. Executive Summary
-โครงการ LearnLab Bridge ได้รับการปรับปรุงโครงสร้างการบริหารจัดการเวอร์ชัน (Git Governance) และระบบการส่งออกข้อมูล (Public Export) ให้เป็นมาตรฐานสากลและรองรับการทำงานแบบ Multi-Agent ได้อย่างสมบูรณ์ ระบบมีความเสถียรในแง่ของ Build Pipeline และการแยกบริบทระหว่าง Private (Internal) และ Public (Release)
+โครงการ LearnLab Bridge ก้าวเข้าสู่ระยะการนำข้อมูลมาวิเคราะห์เพื่อการเรียนรู้ (Learning Intelligence) โดยมีการเพิ่มระบบ Dashboard สำหรับ Admin เพื่อติดตามกิจกรรมของผู้ใช้งาน และระบบ Sync ข้อมูลจาก JupyterHub logs เข้าสู่ฐานข้อมูล PostgreSQL/Prisma เพื่อการประมวลผลเชิงลึก
 
 ## 2. Technical Infrastructure
 - **Branching Model**: GitLab Flow
@@ -16,12 +16,11 @@
     - `/learnlab-bridge`: พื้นที่หลัก (Branch: `main`)
     - `/learnlab-bridge-export`: พื้นที่ส่งออก (Branch: `public/export-mwit-ds`)
 
-## 3. Key Achievements (v0.4.5 Milestones)
-- **Tag Organization**: ใช้กลยุทธ์ "Separate & Clean" แยก `-alpha` tags ออกจากเวอร์ชันสะอาดสำหรับสาธารณะ
-- **Build Reliability**: แก้ไขปัญหา UTF-8 BOM ใน JSON files ที่เกิดจาก PowerShell ทำให้ Docker Build ใน Dockerhub/Local เสถียรขึ้น
-- **Automation Scripts**: 
-    - `sync-version.ps1`: ซิงค์เลขเวอร์ชันทุกจุดแบบ No-BOM
-    - `sync-to-public.ps1`: รวมโค้ด กรองไฟล์ กรองความลับ และสร้าง Clean Tag อัตโนมัติ
+## 3. Key Achievements (v0.4.6 Milestones)
+- **Learning Intelligence Dashboard**: ระบบแสดงผลภาพรวมกิจกรรมผู้ใช้งาน (Insights) สำหรับผู้ดูแลระบบ
+- **Log Aggregation & Sync**: สคริปต์และ API สำหรับการดึงข้อมูลจาก JupyterHub และประมวลผลลงตาราง Aggregation
+- **Database Schema Evolution**: เพิ่มตารางสำหรับรองรับการเก็บข้อมูลพฤติกรรมการใช้งานแบบรายบุคคล
+- **Tag Organization**: รักษามาตรฐานกลยุทธ์ "Separate & Clean" อย่างต่อเนื่อง
 
 ## 4. Operational Guardrails (For Agents)
 - **Encoding Rule**: ทุกไฟล์ JSON/TS/VERSION ต้องบันทึกเป็น **UTF-8 without BOM** เสมอ
@@ -32,6 +31,7 @@
 - ตรวจสอบ Resource Usage per User
 - พัฒนาระบบ Snapshot Lab State ก่อน Shutdown
 - เตรียมความพร้อมสำหรับ OAuth Integration
+- ปรับปรุง UI/UX ของ Dashboard ให้รองรับการกรองข้อมูลตามช่วงเวลา
 
 ---
 *Status recorded for agent continuity.*
