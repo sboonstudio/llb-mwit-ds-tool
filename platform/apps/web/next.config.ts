@@ -17,9 +17,6 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: 'standalone',
   serverExternalPackages: ["better-sqlite3"],
-  experimental: {
-    instrumentationHook: true,
-  },
   env: {
     NEXT_PUBLIC_APP_VERSION: projectVersion,
   }
