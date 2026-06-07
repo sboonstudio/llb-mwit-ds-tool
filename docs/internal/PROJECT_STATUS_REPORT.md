@@ -17,9 +17,9 @@
     - `/learnlab-bridge-export`: พื้นที่ส่งออก (Branch: `public/export-mwit-ds`)
 
 ## 3. Key Achievements (v0.4.6 Milestones)
-- **Learning Intelligence Dashboard**: ระบบแสดงผลภาพรวมกิจกรรมผู้ใช้งาน (Insights) สำหรับผู้ดูแลระบบ
-- **Log Aggregation & Sync**: สคริปต์และ API สำหรับการดึงข้อมูลจาก JupyterHub และประมวลผลลงตาราง Aggregation
-- **Database Schema Evolution**: เพิ่มตารางสำหรับรองรับการเก็บข้อมูลพฤติกรรมการใช้งานแบบรายบุคคล
+- **Learning Intelligence Dashboard**: ระบบแสดงผลภาพรวมกิจกรรมผู้ใช้งาน (Insights) สำหรับผู้ดูแลระบบ พร้อมปุ่ม **Sync Now** เพื่อประมวลผลข้อมูลล่าสุด
+- **Log Aggregation & Sync Fix**: ปรับปรุงสคริปต์ Sync ให้เสถียรขึ้นด้วยระบบ Upsert และเพิ่ม Unique Constraint ในฐานข้อมูลเพื่อป้องกันข้อมูลซ้ำซ้อน
+- **Database Schema Evolution**: เพิ่มตารางสำหรับรองรับการเก็บข้อมูลพฤติกรรมการใช้งานแบบรายบุคคล และทำ Migration สำหรับ Aggregation Tables
 - **Tag Organization**: รักษามาตรฐานกลยุทธ์ "Separate & Clean" อย่างต่อเนื่อง
 
 ## 4. Operational Guardrails (For Agents)

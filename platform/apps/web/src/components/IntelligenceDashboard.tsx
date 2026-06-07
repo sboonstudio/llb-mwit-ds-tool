@@ -6,16 +6,40 @@ import ReactECharts from "echarts-for-react";
 export default function IntelligenceDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
 
-  useEffect(() => {
-    setHasMounted(true);
+  const fetchData = () => {
+    setLoading(true);
     fetch("/api/admin/intelligence")
       .then((res) => res.json())
       .then((json) => {
         setData(json);
         setLoading(false);
+      })
+      .catch(err => {
+        console.error("Fetch Error:", err);
+        setLoading(false);
       });
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/intelligence/sync", { method: "POST" });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Sync Error:", err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    setHasMounted(true);
+    fetchData();
   }, []);
 
   if (!hasMounted || loading) return (
@@ -24,6 +48,21 @@ export default function IntelligenceDashboard() {
       Aggregating classroom intelligence...
     </div>
   );
+
+  if (!data || data.topics.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-20 text-center">
+        <p className="text-slate-500 mb-4">No intelligence data found yet.</p>
+        <button 
+          onClick={handleSync}
+          disabled={syncing}
+          className="inline-flex h-10 items-center rounded-md bg-indigo-600 px-6 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {syncing ? "Syncing..." : "Sync Now"}
+        </button>
+      </div>
+    );
+  }
 
   // 1. Topic Performance (Bar Chart)
   const topicOption = {
