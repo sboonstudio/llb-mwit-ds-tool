@@ -6,6 +6,23 @@ import path from "path";
  * สรุปผลข้อมูลจาก ActivityLog ลงตาราง Aggregation
  */
 
+const TOPIC_MAP: Record<string, string> = {
+  "lab01": "Intro to Data Science",
+  "lab02": "Python Programming Basics",
+  "lab03": "Numerical Computing (NumPy)",
+  "lab04": "Data Wrangling (Pandas)",
+  "lab05": "Exploratory Data Analysis",
+  "lab06": "Machine Learning Fundamentals",
+  "root": "General Workspace"
+};
+
+/**
+ * Helper to get human-readable topic name
+ */
+function getTopicName(folderSlug: string): string {
+    return TOPIC_MAP[folderSlug] || folderSlug.toUpperCase();
+}
+
 export async function syncIntelligence() {
   console.log(">>> Starting Intelligence Synchronization...");
 
@@ -30,15 +47,38 @@ export async function syncIntelligence() {
 
   let processedCount = 0;
   let lastProcessedId = lastId;
+  
+  // เก็บสถานะชั่วคราวเพื่อคำนวณ Active Minutes
+  // Record<"Date:UserId", LastTimestamp>
+  const userLastSeen: Record<string, Date> = {};
 
   for (const log of logs) {
-    const date = new Date(log.timestamp);
+    const logTime = new Date(log.timestamp);
+    const date = new Date(logTime);
     date.setHours(0, 0, 0, 0);
 
     const userId = log.userId;
     if (!userId) continue;
 
-    // --- A. ประมวลผลการรันโค้ด (ExecutionStats) ---
+    const userKey = `${date.toISOString()}:${userId}`;
+
+    // --- A. ประมวลผล Active Minutes ---
+    if (userLastSeen[userKey]) {
+        const diffMs = logTime.getTime() - userLastSeen[userKey].getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        // หากห่างกันไม่เกิน 10 นาที ให้ถือว่าเป็น Session ต่อเนื่อง
+        if (diffMins > 0 && diffMins <= 10) {
+            await prisma.dailyUserStats.upsert({
+                where: { date_userId: { date, userId } },
+                update: { activeMinutes: { increment: diffMins } },
+                create: { date, userId, activeMinutes: diffMins, sessionCount: 1 }
+            });
+        }
+    }
+    userLastSeen[userKey] = logTime;
+
+    // --- B. ประมวลผลการรันโค้ด (ExecutionStats) ---
     if (log.action === "CELL_EXECUTION") {
       try {
         const details = JSON.parse(log.details || "{}");
@@ -52,10 +92,11 @@ export async function syncIntelligence() {
         const trackedExtensions = ["ipynb", "py", "c", "cpp", "r"];
         if (trackedExtensions.includes(fileExtension)) {
           const pathParts = filePath.split("/").filter((p: string) => p && p !== ".");
-          let folderName = "root";
+          let folderSlug = "root";
           if (pathParts.length > 1) {
-              folderName = pathParts[0]; 
+              folderSlug = pathParts[0]; 
           }
+          const folderName = getTopicName(folderSlug);
 
           const isSuccess = details.success !== false;
           const errorType = details.error_name || (isSuccess ? null : "UnknownError");
@@ -110,7 +151,7 @@ export async function syncIntelligence() {
       }
     }
 
-    // --- B. ประมวลผลการจัดการระบบ (SystemOpsStats) ---
+    // --- C. ประมวลผลการจัดการระบบ (SystemOpsStats) ---
     const systemActions: Record<string, { group: string; type: string }> = {
       "SPAWN_LAB": { group: "ENV_LIFECYCLE", type: "READY_LAB" },
       "LAB_SPAWN": { group: "ENV_LIFECYCLE", type: "READY_LAB" },
@@ -151,27 +192,15 @@ export async function syncIntelligence() {
           count: 1,
         },
       });
-    }
 
-    // --- C. ประมวลผลสถิติรายวัน (DailyUserStats) ---
-    if (matchedAction?.type === "READY_LAB") {
-      await prisma.dailyUserStats.upsert({
-        where: {
-          date_userId: {
-            date,
-            userId,
-          },
-        },
-        update: {
-          sessionCount: { increment: 1 },
-        },
-        create: {
-          date,
-          userId,
-          sessionCount: 1,
-          activeMinutes: 0,
-        },
-      });
+      // Update Session Count for Daily Stats
+      if (matchedAction.type === "READY_LAB") {
+        await prisma.dailyUserStats.upsert({
+            where: { date_userId: { date, userId } },
+            update: { sessionCount: { increment: 1 } },
+            create: { date, userId, sessionCount: 1, activeMinutes: 0 }
+        });
+      }
     }
 
     processedCount++;

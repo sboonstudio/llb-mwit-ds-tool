@@ -145,7 +145,7 @@ export default function IntelligenceDashboard() {
           <div className="flex items-center gap-3">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  System Status: Fully Operational
+                  Auto-Sync Active (Every 10m)
               </p>
           </div>
           <div className="flex items-center gap-4">
@@ -271,6 +271,13 @@ export default function IntelligenceDashboard() {
                 <p className="text-xl font-bold text-amber-900">
                     {data.topics.reduce((acc: number, t: any) => acc + t.total, 0).toLocaleString()}
                 </p>
+              </div>
+              <div className="rounded-lg bg-slate-800 p-4 border border-slate-700">
+                <p className="text-xs font-medium text-slate-300 uppercase">Classroom Engagement</p>
+                <p className="text-xl font-bold text-white">
+                    {data.totalActiveMinutes || 0} <span className="text-xs font-normal text-slate-400">mins</span>
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase">Across all sessions</p>
               </div>
            </div>
         </div>
