@@ -80,6 +80,11 @@ export async function GET() {
       take: 15, // ดูย้อนหลัง 15 วันที่มีข้อมูล
     });
 
+    // 5. GET LAST SYNC TIME
+    const config = await prisma.systemConfig.findUnique({
+      where: { id: "CURRENT" },
+    });
+
     return NextResponse.json({
       topics,
       envLifecycle,
@@ -90,6 +95,7 @@ export async function GET() {
         type: e.errorType,
         count: e.count,
       })),
+      lastSyncedAt: config?.lastSyncedAt,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
