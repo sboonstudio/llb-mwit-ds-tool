@@ -153,24 +153,11 @@ async def prepare_user_workspace(spawner):
         else:
             bashrc.write_text(f"{hook_cmd}\n")
 
-        # Deploy Jupyter Server Config (for File Tracker)
-        jupyter_config_dir = user_dir / ".jupyter"
-        jupyter_config_dir.mkdir(parents=True, exist_ok=True)
-        server_config = jupyter_config_dir / "jupyter_server_config.py"
-        server_config_content = "c.ServerApp.jpserver_extensions = { 'file_tracker': True }\n"
-        server_config.write_text(server_config_content)
-
         # Fix permissions for the injected files
         for root, dirs, files in os.walk(user_dir / ".ipython"):
             apply_user_ownership(Path(root), directory=True)
             for f in files:
                 apply_user_ownership(Path(root) / f)
-        
-        for root, dirs, files in os.walk(user_dir / ".jupyter"):
-            apply_user_ownership(Path(root), directory=True)
-            for f in files:
-                apply_user_ownership(Path(root) / f)
-                
         apply_user_ownership(bashrc)
     except Exception as e:
         print(f"Telemetry injection failed for {username}: {e}")

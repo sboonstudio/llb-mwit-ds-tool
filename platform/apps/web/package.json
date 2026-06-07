@@ -1,6 +1,10 @@
 {
     "name":  "llbridge-web",
+<<<<<<< HEAD
     "version":  "0.4.5",
+=======
+    "version":  "0.4.6-alpha",
+>>>>>>> main
     "private":  true,
     "scripts":  {
                     "predev":  "prisma generate",
@@ -14,7 +18,11 @@
                 },
     "dependencies":  {
                          "@prisma/adapter-better-sqlite3":  "^7.8.0",
+<<<<<<< HEAD
                          "@prisma/client":  "^6.4.1",
+=======
+                         "@prisma/client":  "6.4.1",
+>>>>>>> main
                          "bcryptjs":  "^3.0.3",
                          "better-sqlite3":  "^12.10.0",
                          "dotenv":  "^17.4.2",
@@ -22,6 +30,10 @@
                          "echarts-for-react":  "3.0.6",
                          "next":  "16.2.6",
                          "next-auth":  "^5.0.0-beta.31",
+<<<<<<< HEAD
+=======
+                         "prisma":  "6.4.1",
+>>>>>>> main
                          "react":  "19.2.4",
                          "react-dom":  "19.2.4"
                      },
@@ -34,8 +46,15 @@
                             "@types/react-dom":  "^19",
                             "eslint":  "^9",
                             "eslint-config-next":  "16.2.6",
+<<<<<<< HEAD
                             "prisma":  "^6.4.1",
                             "tailwindcss":  "^4",
                             "typescript":  "^5"
                         }
 }
+=======
+                            "tailwindcss":  "^4",
+                            "typescript":  "^5"
+                        }
+}
+>>>>>>> main

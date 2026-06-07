@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminInsights from "@/components/AdminInsights";
+import IntelligenceDashboard from "@/components/IntelligenceDashboard";
 import TelemetryDebugStream from "@/components/TelemetryDebugStream";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,18 @@ export default async function InsightsPage() {
           </div>
         </div>
 
+        <section className="mb-12">
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800">Classroom Intelligence</h2>
+                <span className="rounded bg-indigo-100 px-2 py-1 text-[10px] font-bold text-indigo-600">NEW: GROUPED ANALYTICS</span>
+            </div>
+            <IntelligenceDashboard />
+        </section>
+
         <section className="mb-8">
+            <div className="mb-4">
+                <h2 className="text-xl font-bold text-slate-800">System & Activity Trends</h2>
+            </div>
             <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
                     <p className="text-xs font-bold uppercase text-blue-600">Total Activities</p>

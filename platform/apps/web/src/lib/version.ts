@@ -23,6 +23,10 @@ export function getProjectVersion(): string {
     console.error("Failed to read VERSION file:", error);
   }
 
+<<<<<<< HEAD
   return "0.4.5"; // Final fallback
+=======
+  return "0.4.6-alpha"; // Final fallback
+>>>>>>> main
 }
 
