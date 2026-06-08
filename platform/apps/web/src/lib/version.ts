@@ -23,5 +23,5 @@ export function getProjectVersion(): string {
     console.error("Failed to read VERSION file:", error);
   }
 
-  return "0.4.6"; // Final fallback
+  return "0.4.7"; // Final fallback
 }
