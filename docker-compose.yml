@@ -55,10 +55,6 @@ services:
         condition: service_completed_successfully
     ports:
       - "${JUPYTERHUB_PORT:-8000}:8000"
-    environment:
-      JUPYTERHUB_HOST_WORKSPACES: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/lab-workspaces
-      JUPYTERHUB_HOST_SHARED_CONTENT: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/content/sample-notebooks
-      JUPYTERHUB_HOST_SINGLEUSER_CONFIG: ${LLBRIDGE_PROJECT_ROOT}/infrastructure/lab/jupyterlab/singleuser-config
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LLBRIDGE_PROJECT_ROOT}/infrastructure/data/jupyterhub:/srv/jupyterhub
@@ -89,6 +85,18 @@ services:
       - JUPYTERHUB_SHARED_SECRET=${JUPYTERHUB_SHARED_SECRET}
     ports:
       - "514:514/udp"
+    restart: always
+
+  llbridge-monitor:
+    build:
+      context: ./infrastructure/lab/jupyterhub
+      dockerfile: Dockerfile
+    command: python3 -u /opt/jupyterhub/resource_monitor.py
+    env_file:
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./infrastructure/lab/jupyterhub/resource_monitor.py:/opt/jupyterhub/resource_monitor.py:ro
     restart: always
 
 networks:
