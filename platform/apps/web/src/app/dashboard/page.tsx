@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
 import ActivityIntelligence from "@/components/ActivityIntelligence";
 import EditNameForm from "@/components/EditNameForm";
+import LiveStatus from "@/components/LiveStatus";
 import { headers } from "next/headers";
 import Link from "next/link";
 
@@ -41,6 +42,12 @@ export default async function DashboardPage() {
     where: { userId: session.user.id },
     orderBy: { recordedAt: "desc" },
   });
+
+  const formattedUsage = latestUsage ? {
+    cpuUsage: latestUsage.cpuUsage,
+    memoryUsage: latestUsage.memoryUsage,
+    recordedAt: latestUsage.recordedAt.toISOString(),
+  } : null;
 
   const isPublic = !host.includes("localhost") && !host.includes("127.0.0.1");
   const canEditName = dbUser.role !== "GUEST";
@@ -198,24 +205,7 @@ export default async function DashboardPage() {
 
               {/* Status Section: Resource Usage */}
               <div className="space-y-4">
-                <div className="h-full rounded-xl border border-emerald-100 bg-emerald-50/30 p-6">
-                  <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-emerald-700">
-                    Live Status
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
-                    <div className="flex items-center justify-between rounded-lg bg-white/50 p-3 border border-emerald-100/50">
-                      <span className="text-[10px] font-bold text-emerald-600">CPU LOAD</span>
-                      <span className="text-lg font-black text-emerald-900">{latestUsage ? `${latestUsage.cpuUsage.toFixed(1)}%` : "0.0%"}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-white/50 p-3 border border-emerald-100/50">
-                      <span className="text-[10px] font-bold text-emerald-600">RAM USAGE</span>
-                      <span className="text-lg font-black text-emerald-900">{latestUsage ? `${latestUsage.memoryUsage.toFixed(0)} MB` : "0 MB"}</span>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-[9px] text-emerald-600/70 italic">
-                    * Metrics captured from last session.
-                  </p>
-                </div>
+                <LiveStatus initialData={formattedUsage} />
               </div>
             </div>
 
